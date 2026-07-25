@@ -120,6 +120,46 @@ p {
   margin-bottom: 6px;
 }
 
+.share-box {
+  text-align: center;
+  margin: 22px 0;
+}
+
+.share-button {
+  display: inline-block;
+  background: rgba(242,183,5,0.1);
+  color: #f2b705;
+  border: 1px solid #f2b705;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.share-button:hover {
+  background: rgba(242,183,5,0.2);
+}
+
+.share-button:active {
+  transform: scale(0.97);
+}
+
+.share-copied {
+  display: block;
+  margin-top: 10px;
+  color: #6dd58c;
+  font-size: 0.85em;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.share-copied.visible {
+  opacity: 1;
+}
+
 .disclaimer {
   color: #6b7078;
   font-size: 0.8em;
