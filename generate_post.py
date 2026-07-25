@@ -23,6 +23,7 @@ import google.generativeai as genai
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 AFFILIATE_LINK = os.environ.get("AFFILIATE_LINK", "https://example.com/your-affiliate-link")
 SITE_TITLE = "Forex & Crypto Trading Academy"
+SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
 
 TOPICS = [
     "Forex trading ke liye beginner ki 5 sabse zaroori tips",
@@ -106,6 +107,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
       <p>🚀 Trading shuru karne ke liye trusted platform try karein:</p>
       <a href="{AFFILIATE_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Abhi Account Banayein &rarr;</a>
     </div>
+    <p class="site-link">🌐 Poori website dekhein: <a href="{SITE_URL}" target="_blank" rel="noopener">{SITE_URL}</a></p>
     <p class="hashtags">{hashtags_html}</p>
     <div class="share-box">
       <button class="share-button" onclick="sharePost()">📤 Share Post</button>
