@@ -107,9 +107,31 @@ def build_html(title, body_text, date_str, slug, hashtags):
       <a href="{AFFILIATE_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Abhi Account Banayein &rarr;</a>
     </div>
     <p class="hashtags">{hashtags_html}</p>
+    <div class="share-box">
+      <button class="share-button" onclick="sharePost()">📤 Share Post</button>
+      <span class="share-copied" id="shareCopied">Link copied! ✅</span>
+    </div>
     <p class="disclaimer">⚠️ Disclaimer: Ye content sirf educational purpose ke liye hai. Trading mein risk hota hai, apni research zaroor karein.</p>
   </div>
 </div>
+<script>
+function sharePost() {{
+  const shareData = {{
+    title: document.title,
+    text: "{title}",
+    url: window.location.href
+  }};
+  if (navigator.share) {{
+    navigator.share(shareData).catch(() => {{}});
+  }} else {{
+    navigator.clipboard.writeText(window.location.href).then(() => {{
+      const el = document.getElementById("shareCopied");
+      el.classList.add("visible");
+      setTimeout(() => el.classList.remove("visible"), 2000);
+    }});
+  }}
+}}
+</script>
 </body>
 </html>"""
 
