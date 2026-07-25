@@ -126,6 +126,7 @@ def main():
     slug = today.strftime("%Y-%m-%d") + "-" + str(random.randint(100, 999))
 
     post_html = build_html(title, body, date_str, slug)
+    os.makedirs("posts", exist_ok=True)
     with open(f"posts/{slug}.html", "w", encoding="utf-8") as f:
         f.write(post_html)
 
