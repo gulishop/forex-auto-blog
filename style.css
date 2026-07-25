@@ -103,6 +103,24 @@ p {
   box-shadow: 0 4px 14px rgba(242,183,5,0.35);
 }
 
+.site-link {
+  font-size: 0.9em;
+  color: #9aa0ac;
+  text-align: center;
+  margin: 18px 0;
+  word-break: break-all;
+}
+
+.site-link a {
+  color: #f2b705;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.site-link a:hover {
+  text-decoration: underline;
+}
+
 .hashtags {
   margin: 18px 0;
   line-height: 2.2;
