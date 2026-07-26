@@ -101,7 +101,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
-        f"💰 Trusted platform: {AFFILIATE_LINK}"
+        f"💰 Account banane ke liye click karein 👉 {AFFILIATE_LINK}"
     )
     share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
 
@@ -193,7 +193,7 @@ def post_to_facebook(title, body_text, hashtags, post_url):
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
-        f"💰 Trusted platform: {AFFILIATE_LINK}"
+        f"💰 Account banane ke liye click karein 👉 {AFFILIATE_LINK}"
     )
 
     url = f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/feed"
