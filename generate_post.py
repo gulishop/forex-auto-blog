@@ -17,7 +17,7 @@ import os
 import json
 import random
 from datetime import datetime
-import google.generativeai as genai
+from google import genai
 import requests
 
 # ---------- CONFIG ----------
@@ -50,8 +50,8 @@ TOPICS = [
 DEFAULT_HASHTAGS = ["#Forex", "#ForexTrading", "#Crypto", "#CryptoTrading", "#Exness", "#TradingTips", "#FinancialFreedom"]
 
 # ---------- SETUP GEMINI ----------
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-flash-latest")
+client = genai.Client(api_key=GEMINI_API_KEY)
+GEMINI_MODEL = "gemini-flash-latest"
 
 def generate_content(topic):
     prompt = f"""
@@ -70,7 +70,7 @@ def generate_content(topic):
     - Kisi financial guarantee ya "sure profit" jaisa claim mat karo, disclaimer wala tone rakho
     - Emojis natural lagne chahiye, overuse mat karo (max 1-2 per line)
     """
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     return response.text.strip()
 
 def generate_hashtags(topic):
@@ -80,7 +80,7 @@ def generate_hashtags(topic):
     Sirf hashtags do, koi extra text nahi, ek line mein space se separate karke.
     """
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
         tags = response.text.strip().split()
         tags = [t for t in tags if t.startswith("#")]
         if len(tags) >= 4:
@@ -105,6 +105,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
         f"📖 Ye post yahan padhein: {post_url}"
     )
     share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
+    post_url_json = json.dumps(post_url)
 
     return f"""<!DOCTYPE html>
 <html lang="ur">
@@ -113,6 +114,43 @@ def build_html(title, body_text, date_str, slug, hashtags):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title} | {SITE_TITLE}</title>
 <link rel="stylesheet" href="../style.css">
+<style>
+.share-box {{ margin: 24px 0; text-align: center; }}
+.share-label {{ font-size: 0.95em; opacity: 0.85; margin-bottom: 10px; }}
+.share-icons {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}}
+.share-icon {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 0.9em;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}}
+.share-icon:hover {{ transform: translateY(-2px); opacity: 0.92; }}
+.share-whatsapp {{ background: #25D366; }}
+.share-facebook {{ background: #1877F2; }}
+.share-telegram {{ background: #29A9EA; }}
+.share-instagram {{ background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }}
+.share-other {{ background: #555; font-family: inherit; }}
+.share-copied {{
+  display: none;
+  margin-top: 10px;
+  font-size: 0.85em;
+  color: #2ecc71;
+}}
+.share-copied.visible {{ display: inline-block; }}
+</style>
 </head>
 <body>
 <div class="container">
@@ -128,27 +166,57 @@ def build_html(title, body_text, date_str, slug, hashtags):
     <p class="site-link">🌐 Poori website dekhein: <a href="{SITE_URL}" target="_blank" rel="noopener">{SITE_URL}</a></p>
     <p class="hashtags">{hashtags_html}</p>
     <div class="share-box">
-      <button class="share-button" onclick="sharePost()">📤 Share Post</button>
+      <p class="share-label">📤 Is post ko share karein:</p>
+      <div class="share-icons">
+        <a href="#" class="share-icon share-whatsapp" onclick="shareWhatsapp(); return false;" aria-label="Share on WhatsApp">💬 WhatsApp</a>
+        <a href="#" class="share-icon share-facebook" onclick="shareFacebook(); return false;" aria-label="Share on Facebook">📘 Facebook</a>
+        <a href="#" class="share-icon share-telegram" onclick="shareTelegram(); return false;" aria-label="Share on Telegram">✈️ Telegram</a>
+        <a href="#" class="share-icon share-instagram" onclick="shareInstagram(); return false;" aria-label="Share on Instagram">📸 Instagram</a>
+        <button class="share-icon share-other" onclick="shareOther()" aria-label="Other share options">🔗 Other</button>
+      </div>
       <span class="share-copied" id="shareCopied">Link copied! ✅</span>
     </div>
     <p class="disclaimer">⚠️ Disclaimer: Ye content sirf educational purpose ke liye hai. Trading mein risk hota hai, apni research zaroor karein.</p>
   </div>
 </div>
 <script>
-function sharePost() {{
-  const shareText = {share_text_json};
-  const shareData = {{
-    title: document.title,
-    text: shareText
-  }};
+const shareText = {share_text_json};
+const postUrl = {post_url_json};
+
+function copyAndNotify() {{
+  navigator.clipboard.writeText(shareText).then(() => {{
+    const el = document.getElementById("shareCopied");
+    el.classList.add("visible");
+    setTimeout(() => el.classList.remove("visible"), 2500);
+  }});
+}}
+
+function shareWhatsapp() {{
+  window.open("https://wa.me/?text=" + encodeURIComponent(shareText), "_blank");
+}}
+
+function shareFacebook() {{
+  // FB sharer ignores prefilled text on most browsers, so copy full text + open sharer with the link
+  copyAndNotify();
+  window.open("https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(postUrl), "_blank");
+}}
+
+function shareTelegram() {{
+  window.open("https://t.me/share/url?url=" + encodeURIComponent(postUrl) + "&text=" + encodeURIComponent(shareText), "_blank");
+}}
+
+function shareInstagram() {{
+  // Instagram has no web share-intent, so copy text and open the app/site so user can paste it
+  copyAndNotify();
+  window.open("https://www.instagram.com/", "_blank");
+}}
+
+function shareOther() {{
+  const shareData = {{ title: document.title, text: shareText }};
   if (navigator.share) {{
     navigator.share(shareData).catch(() => {{}});
   }} else {{
-    navigator.clipboard.writeText(shareText).then(() => {{
-      const el = document.getElementById("shareCopied");
-      el.classList.add("visible");
-      setTimeout(() => el.classList.remove("visible"), 2000);
-    }});
+    copyAndNotify();
   }}
 }}
 </script>
