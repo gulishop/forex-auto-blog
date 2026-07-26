@@ -1,0 +1,38 @@
+name: Daily Auto Post
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  create-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo checkout karo
+        uses: actions/checkout@v4
+
+      - name: Python setup karo
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencies install karo
+        run: pip install -r requirements.txt
+
+      - name: Naya post generate karo
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AFFILIATE_LINK: ${{ secrets.AFFILIATE_LINK }}
+        run: python generate_post.py
+
+      - name: Changes commit aur push karo
+        run: |
+          git config user.name "auto-post-bot"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Auto post: $(date +'%d-%m-%Y %H:%M')" || echo "Kuch naya nahi hai"
+          git push
