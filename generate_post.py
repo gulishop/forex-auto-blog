@@ -298,6 +298,38 @@ def update_index(posts):
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
+def _debug_fb_token(page_id, page_token):
+    """Post karne se pehle token/permissions ko check karke workflow log mein detail print karta hai,
+    taake exact wajah pata chale (invalid token, missing permission, galat page id, waghera)."""
+    masked = page_token[:10] + "..." + page_token[-6:] if len(page_token) > 20 else "***"
+    print(f"🔍 Debug (Page {page_id}): token prefix = {masked}, length = {len(page_token)}")
+
+    # Token kis Page/User ka hai, aur uske permissions kya hain
+    try:
+        me_resp = requests.get(
+            "https://graph.facebook.com/v25.0/me",
+            params={"fields": "id,name", "access_token": page_token},
+            timeout=15,
+        )
+        me_data = me_resp.json()
+        print(f"🔍 Debug (Page {page_id}): /me response = {me_data}")
+        if "id" in me_data and me_data["id"] != str(page_id):
+            print(f"⚠️ Debug (Page {page_id}): Is TOKEN ka ID ({me_data['id']}) FB_PAGE_ID ({page_id}) se MATCH nahi karta! "
+                  f"Ye galat token/page pairing ka sign hai - FB_PAGE_ID aur FB_PAGE_ACCESS_TOKEN secrets ko dobara check karein.")
+    except Exception as e:
+        print(f"⚠️ Debug (Page {page_id}): /me call fail hua: {e}")
+
+    try:
+        perm_resp = requests.get(
+            f"https://graph.facebook.com/v25.0/{page_id}/permissions",
+            params={"access_token": page_token},
+            timeout=15,
+        )
+        print(f"🔍 Debug (Page {page_id}): permissions response = {perm_resp.json()}")
+    except Exception as e:
+        print(f"⚠️ Debug (Page {page_id}): permissions call fail hua: {e}")
+
+
 def post_to_facebook(title, body_text, hashtags, post_url):
     """Har configured Facebook Page pe naya post automatically publish karta hai."""
     pages = _parse_fb_pages()
@@ -316,6 +348,7 @@ def post_to_facebook(title, body_text, hashtags, post_url):
     )
 
     for page_id, page_token in pages:
+        _debug_fb_token(page_id, page_token)
         url = f"https://graph.facebook.com/v25.0/{page_id}/feed"
         payload = {
             "message": message,
