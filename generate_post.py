@@ -18,12 +18,16 @@ import json
 import random
 from datetime import datetime
 import google.generativeai as genai
+import requests
 
 # ---------- CONFIG ----------
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 AFFILIATE_LINK = os.environ.get("AFFILIATE_LINK", "https://example.com/your-affiliate-link")
 SITE_TITLE = "Forex & Crypto Trading Academy"
 SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
+
+FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
+FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
 
 TOPICS = [
     "Forex trading ke liye beginner ki 5 sabse zaroori tips",
@@ -177,6 +181,37 @@ def update_index(posts):
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
+def post_to_facebook(title, body_text, hashtags, post_url):
+    """Facebook Page pe naya post automatically publish karta hai."""
+    if not FB_PAGE_ID or not FB_PAGE_ACCESS_TOKEN:
+        print("⚠️ FB_PAGE_ID ya FB_PAGE_ACCESS_TOKEN missing hai - Facebook post skip kiya.")
+        return
+
+    hashtags_line = " ".join(hashtags)
+    message = (
+        f"{title}\n\n"
+        f"{body_text.strip()}\n\n"
+        f"{hashtags_line}\n\n"
+        f"🌐 Poori website: {SITE_URL}\n"
+        f"💰 Trusted platform: {AFFILIATE_LINK}"
+    )
+
+    url = f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/feed"
+    payload = {
+        "message": message,
+        "link": post_url,
+        "access_token": FB_PAGE_ACCESS_TOKEN,
+    }
+    try:
+        response = requests.post(url, data=payload, timeout=30)
+        data = response.json()
+        if "id" in data:
+            print(f"✅ Facebook Page pe post ho gaya: {data['id']}")
+        else:
+            print(f"⚠️ Facebook post failed: {data}")
+    except Exception as e:
+        print(f"⚠️ Facebook post error: {e}")
+
 def main():
     topic = random.choice(TOPICS)
     content = generate_content(topic)
@@ -205,6 +240,10 @@ def main():
         json.dump(posts, f, ensure_ascii=False, indent=2)
 
     update_index(posts)
+
+    post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
+    post_to_facebook(title, body, hashtags, post_url)
+
     print(f"Naya post ban gaya: {title}")
     print(f"Hashtags: {' '.join(hashtags)}")
 
