@@ -95,13 +95,14 @@ def build_html(title, body_text, date_str, slug, hashtags):
     hashtags_line = " ".join(hashtags)
     post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
 
-    # Share text jo WhatsApp/Facebook/Twitter pe jayega: poora post + links neeche
+    # Share text jo WhatsApp/Facebook/Twitter pe jayega: poora post + links neeche (har link apne naam ke sath, alag line)
     share_text = (
         f"🎯 Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
-        f"🌐 Poori website: {SITE_URL}"
+        f"🌐 Poori website: {SITE_URL}\n"
+        f"📖 Ye post yahan padhein: {post_url}"
     )
     share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
 
@@ -138,8 +139,7 @@ function sharePost() {{
   const shareText = {share_text_json};
   const shareData = {{
     title: document.title,
-    text: shareText,
-    url: "{post_url}"
+    text: shareText
   }};
   if (navigator.share) {{
     navigator.share(shareData).catch(() => {{}});
