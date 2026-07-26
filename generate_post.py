@@ -14,8 +14,10 @@ Environment variables (GitHub Secrets se aate hain):
 """
 
 import os
+import sys
 import json
 import random
+import time
 from datetime import datetime
 from google import genai
 import requests
@@ -53,6 +55,36 @@ DEFAULT_HASHTAGS = ["#Forex", "#ForexTrading", "#Crypto", "#CryptoTrading", "#Ex
 client = genai.Client(api_key=GEMINI_API_KEY)
 GEMINI_MODEL = "gemini-flash-latest"
 
+
+class QuotaExceededError(Exception):
+    """Jab Gemini free-tier quota/rate-limit khatam ho jaye."""
+    pass
+
+
+def _is_quota_error(e):
+    text = str(e).lower()
+    return any(k in text for k in ["quota", "rate limit", "429", "resource_exhausted"])
+
+
+def call_gemini(prompt, retries=3, delay=20):
+    """Gemini ko call karta hai, quota/rate-limit error pe thoda ruk ke retry karta hai."""
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+            return response.text.strip()
+        except Exception as e:
+            last_err = e
+            if _is_quota_error(e):
+                if attempt < retries:
+                    print(f"⚠️ Quota/rate-limit hit (attempt {attempt}/{retries}), {delay}s baad retry karenge...")
+                    time.sleep(delay)
+                    continue
+                raise QuotaExceededError(str(e)) from e
+            raise
+    raise QuotaExceededError(str(last_err)) from last_err
+
+
 def generate_content(topic):
     prompt = f"""
     Tum ek professional Forex aur Crypto trading educator ho, jo social-media-style engaging
@@ -70,8 +102,7 @@ def generate_content(topic):
     - Kisi financial guarantee ya "sure profit" jaisa claim mat karo, disclaimer wala tone rakho
     - Emojis natural lagne chahiye, overuse mat karo (max 1-2 per line)
     """
-    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-    return response.text.strip()
+    return call_gemini(prompt)
 
 def generate_hashtags(topic):
     prompt = f"""
@@ -80,8 +111,8 @@ def generate_hashtags(topic):
     Sirf hashtags do, koi extra text nahi, ek line mein space se separate karke.
     """
     try:
-        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        tags = response.text.strip().split()
+        text = call_gemini(prompt, retries=1)
+        tags = text.strip().split()
         tags = [t for t in tags if t.startswith("#")]
         if len(tags) >= 4:
             return tags
@@ -282,7 +313,15 @@ def post_to_facebook(title, body_text, hashtags, post_url):
 
 def main():
     topic = random.choice(TOPICS)
-    content = generate_content(topic)
+    try:
+        content = generate_content(topic)
+    except QuotaExceededError as e:
+        print("⚠️ Gemini free-tier quota/rate-limit khatam ho gaya hai is waqt.")
+        print(f"Details: {e}")
+        print("ℹ️ Naya post skip kiya - agla scheduled run automatically retry karega.")
+        print("ℹ️ Agar ye baar-baar ho raha hai, naya API key banao: https://aistudio.google.com/apikey")
+        sys.exit(0)  # workflow ko "failed" na dikhayein, bas is run mein post skip
+
     hashtags = generate_hashtags(topic)
 
     lines = content.split("\n")
