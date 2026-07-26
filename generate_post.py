@@ -88,6 +88,19 @@ def generate_hashtags(topic):
 def build_html(title, body_text, date_str, slug, hashtags):
     paragraphs = "\n".join(f"<p>{line.strip()}</p>" for line in body_text.split("\n") if line.strip())
     hashtags_html = " ".join(f'<span class="hashtag">{h}</span>' for h in hashtags)
+    hashtags_line = " ".join(hashtags)
+    post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
+
+    # Share text jo WhatsApp/Facebook/Twitter pe jayega: poora post + links neeche
+    share_text = (
+        f"{title}\n\n"
+        f"{body_text.strip()}\n\n"
+        f"{hashtags_line}\n\n"
+        f"🌐 Poori website: {SITE_URL}\n"
+        f"💰 Trusted platform: {AFFILIATE_LINK}"
+    )
+    share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
+
     return f"""<!DOCTYPE html>
 <html lang="ur">
 <head>
@@ -118,15 +131,16 @@ def build_html(title, body_text, date_str, slug, hashtags):
 </div>
 <script>
 function sharePost() {{
+  const shareText = {share_text_json};
   const shareData = {{
     title: document.title,
-    text: "{title}",
-    url: window.location.href
+    text: shareText,
+    url: "{post_url}"
   }};
   if (navigator.share) {{
     navigator.share(shareData).catch(() => {{}});
   }} else {{
-    navigator.clipboard.writeText(window.location.href).then(() => {{
+    navigator.clipboard.writeText(shareText).then(() => {{
       const el = document.getElementById("shareCopied");
       el.classList.add("visible");
       setTimeout(() => el.classList.remove("visible"), 2000);
