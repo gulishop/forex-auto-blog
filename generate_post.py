@@ -31,6 +31,19 @@ SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
 FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
 
+def _parse_fb_pages():
+    """FB_PAGE_ID aur FB_PAGE_ACCESS_TOKEN dono comma-separated ho sakte hain
+    (multiple pages ke liye), jaise: FB_PAGE_ID=111,222  FB_PAGE_ACCESS_TOKEN=tokA,tokB
+    Dono lists same order/length mein honi chahiye."""
+    if not FB_PAGE_ID or not FB_PAGE_ACCESS_TOKEN:
+        return []
+    ids = [p.strip() for p in FB_PAGE_ID.split(",") if p.strip()]
+    tokens = [t.strip() for t in FB_PAGE_ACCESS_TOKEN.split(",") if t.strip()]
+    if len(ids) != len(tokens):
+        print(f"⚠️ FB_PAGE_ID ({len(ids)}) aur FB_PAGE_ACCESS_TOKEN ({len(tokens)}) ki count match nahi karti - Facebook post skip kiya.")
+        return []
+    return list(zip(ids, tokens))
+
 TOPICS = [
     "Forex trading ke liye beginner ki 5 sabse zaroori tips",
     "Risk management kaise karein Forex trading mein",
@@ -285,8 +298,9 @@ def update_index(posts):
         f.write(html)
 
 def post_to_facebook(title, body_text, hashtags, post_url):
-    """Facebook Page pe naya post automatically publish karta hai."""
-    if not FB_PAGE_ID or not FB_PAGE_ACCESS_TOKEN:
+    """Har configured Facebook Page pe naya post automatically publish karta hai."""
+    pages = _parse_fb_pages()
+    if not pages:
         print("⚠️ FB_PAGE_ID ya FB_PAGE_ACCESS_TOKEN missing hai - Facebook post skip kiya.")
         return
 
@@ -299,21 +313,22 @@ def post_to_facebook(title, body_text, hashtags, post_url):
         f"🌐 Poori website: {SITE_URL}"
     )
 
-    url = f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/feed"
-    payload = {
-        "message": message,
-        "link": post_url,
-        "access_token": FB_PAGE_ACCESS_TOKEN,
-    }
-    try:
-        response = requests.post(url, data=payload, timeout=30)
-        data = response.json()
-        if "id" in data:
-            print(f"✅ Facebook Page pe post ho gaya: {data['id']}")
-        else:
-            print(f"⚠️ Facebook post failed: {data}")
-    except Exception as e:
-        print(f"⚠️ Facebook post error: {e}")
+    for page_id, page_token in pages:
+        url = f"https://graph.facebook.com/v25.0/{page_id}/feed"
+        payload = {
+            "message": message,
+            "link": post_url,
+            "access_token": page_token,
+        }
+        try:
+            response = requests.post(url, data=payload, timeout=30)
+            data = response.json()
+            if "id" in data:
+                print(f"✅ Facebook Page ({page_id}) pe post ho gaya: {data['id']}")
+            else:
+                print(f"⚠️ Facebook post failed (Page {page_id}): {data}")
+        except Exception as e:
+            print(f"⚠️ Facebook post error (Page {page_id}): {e}")
 
 def main():
     topic = random.choice(TOPICS)
