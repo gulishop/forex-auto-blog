@@ -27,6 +27,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 AFFILIATE_LINK = os.environ.get("AFFILIATE_LINK", "https://example.com/your-affiliate-link")
 SITE_TITLE = "Forex & Crypto Trading Academy"
 SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
+SECOND_SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
 
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
 FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
@@ -306,11 +307,12 @@ def post_to_facebook(title, body_text, hashtags, post_url):
 
     hashtags_line = " ".join(hashtags)
     message = (
-        f"🎯 Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
-        f"🌐 Poori website: {SITE_URL}"
+        f"🎯 Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"🌐 Poori website: {SITE_URL}\n\n"
+        f"📚 Trading course aur detailed guides ke liye humari Academy dekhein: {SECOND_SITE_URL}"
     )
 
     for page_id, page_token in pages:
