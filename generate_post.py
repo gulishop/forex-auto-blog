@@ -26,7 +26,7 @@ import requests
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 AFFILIATE_LINK = os.environ.get("AFFILIATE_LINK", "https://example.com/your-affiliate-link")
 SITE_TITLE = "Forex & Crypto Trading Academy"
-SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
+SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
 
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
 FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
@@ -95,7 +95,11 @@ def generate_content(topic):
     trading community mein likha jata hai). Requirements:
     - 250-350 words
     - 3-4 short paragraphs ya bullet points
-    - Ek catchy heading do (pehli line mein, bina # ke), heading mein ek relevant emoji bhi shamil karo
+    - Ek catchy heading do (pehli line mein, bina # ke), heading mein ek relevant emoji bhi shamil karo.
+      Heading aisa likho jo curiosity jagaye AUR clearly bataye ke post ke andar kya milega
+      (jaise "5 Galtiyan Jo Naye Traders Karte Hain (Aur Inse Kaise Bachein)" ya
+      "Stop Loss Sahi Jagah Kaise Lagayein? Ye 3 Tarike Try Karein"), sirf vague ya
+      clickbait-only heading mat do jisme content ka andaza na ho.
     - Har paragraph ya bullet point ke shuru mein ek relevant emoji use karo (jaise 📊 💡 ⚠️ 🚀 💰 📈 🎯)
     - Beginner-friendly tone, practical tips, modern aur energetic lehja
     - Ant mein ek short call-to-action line jo trading platform try karne ke liye encourage kare, usme bhi emoji ho
