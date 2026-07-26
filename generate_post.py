@@ -32,18 +32,34 @@ SECOND_SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-syst
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
 FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
 
+# Doosra Page (FKC Trading Company) - alag secrets ke through
+FB_PAGE_ID_FKC = os.environ.get("FB_PAGE_ID_FKC")
+FB_PAGE_TOKEN_FKC = os.environ.get("FB_PAGE_TOKEN_FKC")
+
 def _parse_fb_pages():
-    """FB_PAGE_ID aur FB_PAGE_ACCESS_TOKEN dono comma-separated ho sakte hain
-    (multiple pages ke liye), jaise: FB_PAGE_ID=111,222  FB_PAGE_ACCESS_TOKEN=tokA,tokB
-    Dono lists same order/length mein honi chahiye."""
-    if not FB_PAGE_ID or not FB_PAGE_ACCESS_TOKEN:
-        return []
-    ids = [p.strip() for p in FB_PAGE_ID.split(",") if p.strip()]
-    tokens = [t.strip() for t in FB_PAGE_ACCESS_TOKEN.split(",") if t.strip()]
-    if len(ids) != len(tokens):
-        print(f"⚠️ FB_PAGE_ID ({len(ids)}) aur FB_PAGE_ACCESS_TOKEN ({len(tokens)}) ki count match nahi karti - Facebook post skip kiya.")
-        return []
-    return list(zip(ids, tokens))
+    """Facebook Pages ki list banata hai jin par post karna hai.
+    1) FB_PAGE_ID aur FB_PAGE_ACCESS_TOKEN comma-separated ho sakte hain
+       (jaise: FB_PAGE_ID=111,222  FB_PAGE_ACCESS_TOKEN=tokA,tokB) - dono same order/length mein honi chahiye.
+    2) Alag se FB_PAGE_ID_FKC aur FB_PAGE_TOKEN_FKC (FKC Trading Company Page) bhi
+       automatically list mein add ho jate hain agar set ho.
+    """
+    pages = []
+
+    if FB_PAGE_ID and FB_PAGE_ACCESS_TOKEN:
+        ids = [p.strip() for p in FB_PAGE_ID.split(",") if p.strip()]
+        tokens = [t.strip() for t in FB_PAGE_ACCESS_TOKEN.split(",") if t.strip()]
+        if len(ids) != len(tokens):
+            print(f"⚠️ FB_PAGE_ID ({len(ids)}) aur FB_PAGE_ACCESS_TOKEN ({len(tokens)}) ki count match nahi karti - ye pair skip kiya.")
+        else:
+            pages.extend(zip(ids, tokens))
+
+    if FB_PAGE_ID_FKC and FB_PAGE_TOKEN_FKC:
+        pages.append((FB_PAGE_ID_FKC.strip(), FB_PAGE_TOKEN_FKC.strip()))
+
+    if not pages:
+        print("⚠️ Koi Facebook Page secrets set nahi hain - Facebook post skip hoga.")
+
+    return pages
 
 TOPICS = [
     "Forex trading ke liye beginner ki 5 sabse zaroori tips",
