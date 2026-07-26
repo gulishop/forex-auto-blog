@@ -97,11 +97,11 @@ def build_html(title, body_text, date_str, slug, hashtags):
 
     # Share text jo WhatsApp/Facebook/Twitter pe jayega: poora post + links neeche
     share_text = (
+        f"🎯 Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
-        f"🌐 Poori website: {SITE_URL}\n"
-        f"💰 Account banane ke liye click karein 👉 {AFFILIATE_LINK}"
+        f"🌐 Poori website: {SITE_URL}"
     )
     share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
 
@@ -189,11 +189,11 @@ def post_to_facebook(title, body_text, hashtags, post_url):
 
     hashtags_line = " ".join(hashtags)
     message = (
+        f"🎯 Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
-        f"🌐 Poori website: {SITE_URL}\n"
-        f"💰 Account banane ke liye click karein 👉 {AFFILIATE_LINK}"
+        f"🌐 Poori website: {SITE_URL}"
     )
 
     url = f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/feed"
