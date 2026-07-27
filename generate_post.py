@@ -83,6 +83,9 @@ TOPICS = [
 
 DEFAULT_HASHTAGS = ["#Forex", "#ForexTrading", "#Crypto", "#CryptoTrading", "#Exness", "#TradingTips", "#FinancialFreedom"]
 
+# Ye hashtags HAR post ke sath hamesha lagenge (fixed/default), baqi topic-wise hashtags inke sath add hote hain
+BRAND_HASHTAGS = ["#FKCTradingCompany", "#FKCTradingAcademy", "#ForexDailySignal", "#Fazulkhanchandio"]
+
 # ---------- SETUP GEMINI ----------
 client = genai.Client(api_key=GEMINI_API_KEY)
 GEMINI_MODEL = "gemini-flash-latest"
@@ -146,15 +149,23 @@ def generate_hashtags(topic):
     Is Forex/Crypto trading topic ke liye 8 relevant English hashtags do (jaise #Forex #Trading).
     Sirf hashtags do, koi extra text nahi, ek line mein space se separate karke.
     """
+    tags = None
     try:
         text = call_gemini(prompt, retries=1)
-        tags = text.strip().split()
-        tags = [t for t in tags if t.startswith("#")]
-        if len(tags) >= 4:
-            return tags
+        generated = [t for t in text.strip().split() if t.startswith("#")]
+        if len(generated) >= 4:
+            tags = generated
     except Exception:
         pass
-    return DEFAULT_HASHTAGS
+    if tags is None:
+        tags = DEFAULT_HASHTAGS
+
+    # BRAND_HASHTAGS hamesha shamil honge (duplicates hata ke), taake har post pe fixed brand tags rahein
+    final_tags = list(BRAND_HASHTAGS)
+    for t in tags:
+        if t not in final_tags:
+            final_tags.append(t)
+    return final_tags
 
 def build_html(title, body_text, date_str, slug, hashtags):
     paragraphs = "\n".join(f"<p>{line.strip()}</p>" for line in body_text.split("\n") if line.strip())
