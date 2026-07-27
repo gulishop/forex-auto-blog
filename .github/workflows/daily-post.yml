@@ -23,7 +23,7 @@ jobs:
       - name: Dependencies install karo
         run: pip install -r requirements.txt
 
-      - name: Naya post generate karo
+      - name: Naya post generate karo (Facebook + Telegram dono par)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           AFFILIATE_LINK: ${{ secrets.AFFILIATE_LINK }}
@@ -31,6 +31,8 @@ jobs:
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
           FB_PAGE_ID_FKC: ${{ secrets.FB_PAGE_ID_FKC }}
           FB_PAGE_TOKEN_FKC: ${{ secrets.FB_PAGE_TOKEN_FKC }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python generate_post.py
 
       - name: Changes commit aur push karo
