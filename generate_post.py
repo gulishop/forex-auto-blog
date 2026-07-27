@@ -10,7 +10,8 @@ Ye script:
 
 Environment variables (GitHub Secrets se aate hain):
 - GEMINI_API_KEY   -> Google AI Studio se free API key
-- AFFILIATE_LINK   -> aapka affiliate link
+- AFFILIATE_LINK   -> aapka Exness affiliate link
+- DERIV_LINK       -> aapka Deriv affiliate link
 """
 
 import os
@@ -25,6 +26,7 @@ import requests
 # ---------- CONFIG ----------
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 AFFILIATE_LINK = os.environ.get("AFFILIATE_LINK", "https://example.com/your-affiliate-link")
+DERIV_LINK = os.environ.get("DERIV_LINK", "https://track.deriv.com/_WlJFXVMX3vf1hit6RV3zsGNd7ZgqdRLk/1/")
 SITE_TITLE = "Forex & Crypto Trading Academy"
 SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
 SECOND_SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
@@ -160,11 +162,12 @@ def build_html(title, body_text, date_str, slug, hashtags):
     hashtags_line = " ".join(hashtags)
     post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
 
-    # Share text jo WhatsApp/Facebook/Twitter pe jayega: poora post + links neeche (har link apne naam ke sath, alag line)
+    # Share text jo WhatsApp/Facebook/Twitter pe jayega: pehle post ka text, phir neeche saara data (links, hashtags, waghera)
     share_text = (
-        f"🎯 Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
+        f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"{hashtags_line}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
         f"📖 Ye post yahan padhein: {post_url}"
@@ -227,6 +230,10 @@ def build_html(title, body_text, date_str, slug, hashtags):
     <div class="cta-box">
       <p>🚀 Trading shuru karne ke liye trusted platform try karein:</p>
       <a href="{AFFILIATE_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Abhi Account Banayein &rarr;</a>
+    </div>
+    <div class="cta-box">
+      <p>🆕 Create Deriv Account:</p>
+      <a href="{DERIV_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Deriv par Account Banayein &rarr;</a>
     </div>
     <p class="site-link">🌐 Poori website dekhein: <a href="{SITE_URL}" target="_blank" rel="noopener">{SITE_URL}</a></p>
     <p class="hashtags">{hashtags_html}</p>
@@ -358,7 +365,8 @@ def post_to_facebook(title, body_text, hashtags, post_url):
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
-        f"🎯 Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"🌐 Poori website: {SITE_URL}\n\n"
         f"📚 Trading course aur detailed guides ke liye humari Academy dekhein: {SECOND_SITE_URL}"
     )
