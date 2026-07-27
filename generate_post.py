@@ -12,6 +12,8 @@ Environment variables (GitHub Secrets se aate hain):
 - GEMINI_API_KEY   -> Google AI Studio se free API key
 - AFFILIATE_LINK   -> aapka Exness affiliate link
 - DERIV_LINK       -> aapka Deriv affiliate link
+- TELEGRAM_BOT_TOKEN -> BotFather se mila hua bot token
+- TELEGRAM_CHAT_ID   -> jis channel/group mein post karna hai uski chat id (jaise @yourchannel ya -1001234567890)
 """
 
 import os
@@ -37,6 +39,12 @@ FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
 # Doosra Page (FKC Trading Company) - alag secrets ke through
 FB_PAGE_ID_FKC = os.environ.get("FB_PAGE_ID_FKC")
 FB_PAGE_TOKEN_FKC = os.environ.get("FB_PAGE_TOKEN_FKC")
+
+# Telegram (BotFather se bot token, aur group/channel ki chat id)
+# TELEGRAM_CHAT_ID mein ek se zyada destinations bhi de sakte hain, comma-separated
+# (jaise: TELEGRAM_CHAT_ID=-1001111111111,@FKCTradingAcademy)
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 def _parse_fb_pages():
     """Facebook Pages ki list banata hai jin par post karna hai.
@@ -400,6 +408,42 @@ def post_to_facebook(title, body_text, hashtags, post_url):
         except Exception as e:
             print(f"⚠️ Facebook post error (Page {page_id}): {e}")
 
+def post_to_telegram(title, body_text, hashtags, post_url):
+    """Telegram ke har configured group/channel pe naya post automatically bhejta hai."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("⚠️ TELEGRAM_BOT_TOKEN ya TELEGRAM_CHAT_ID missing hai - Telegram post skip kiya.")
+        return
+
+    chat_ids = [c.strip() for c in TELEGRAM_CHAT_ID.split(",") if c.strip()]
+
+    hashtags_line = " ".join(hashtags)
+    message = (
+        f"{title}\n\n"
+        f"{body_text.strip()}\n\n"
+        f"{hashtags_line}\n\n"
+        f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
+        f"🌐 Poori website: {SITE_URL}\n"
+        f"📖 Ye post yahan padhein: {post_url}"
+    )
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    for chat_id in chat_ids:
+        payload = {
+            "chat_id": chat_id,
+            "text": message,
+            "disable_web_page_preview": False,
+        }
+        try:
+            response = requests.post(url, data=payload, timeout=30)
+            data = response.json()
+            if data.get("ok"):
+                print(f"✅ Telegram ({chat_id}) pe post ho gaya (message_id: {data['result']['message_id']})")
+            else:
+                print(f"⚠️ Telegram post failed ({chat_id}): {data}")
+        except Exception as e:
+            print(f"⚠️ Telegram post error ({chat_id}): {e}")
+
 def main():
     topic = random.choice(TOPICS)
     try:
@@ -439,6 +483,7 @@ def main():
 
     post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
     post_to_facebook(title, body, hashtags, post_url)
+    post_to_telegram(title, body, hashtags, post_url)
 
     print(f"Naya post ban gaya: {title}")
     print(f"Hashtags: {' '.join(hashtags)}")
