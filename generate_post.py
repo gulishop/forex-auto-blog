@@ -1,3 +1,4 @@
+
 """
 Daily Forex/Trading/Crypto Education Post Generator
 -----------------------------------------------------
@@ -56,6 +57,11 @@ FB_PAGE_TOKEN_FKC = os.environ.get("FB_PAGE_TOKEN_FKC")
 # (jaise: TELEGRAM_CHAT_ID=-1001111111111,@FKCTradingAcademy)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+
+# WhatsApp (Meta Cloud API) - sirf aapko personal notification bhejne ke liye
+WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
+WHATSAPP_PHONE_ID = os.environ.get("WHATSAPP_PHONE_ID")
+WHATSAPP_TO_NUMBER = os.environ.get("WHATSAPP_TO_NUMBER")
 
 def _parse_fb_pages():
     """Facebook Pages ki list banata hai jin par post karna hai.
@@ -458,6 +464,32 @@ def post_to_telegram(title, body_text, hashtags, post_url):
         except Exception as e:
             print(f"⚠️ Telegram post error ({chat_id}): {e}")
 
+def post_to_whatsapp(title, post_url):
+    """Aapko personal WhatsApp par notification bhejta hai jab naya post ban jaye.
+    Meta ka pre-approved 'hello_world' template use hota hai (custom template
+    approval se pehle turant kaam karne ke liye)."""
+    if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID or not WHATSAPP_TO_NUMBER:
+        print("⚠️ WHATSAPP_TOKEN/WHATSAPP_PHONE_ID/WHATSAPP_TO_NUMBER missing hai - WhatsApp notification skip kiya.")
+        return
+
+    url = f"https://graph.facebook.com/v21.0/{WHATSAPP_PHONE_ID}/messages"
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": WHATSAPP_TO_NUMBER,
+        "type": "template",
+        "template": {"name": "hello_world", "language": {"code": "en_US"}},
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        data = response.json()
+        if "messages" in data:
+            print(f"✅ WhatsApp notification ({WHATSAPP_TO_NUMBER}) pe bhej diya. (Naya post: {title})")
+        else:
+            print(f"⚠️ WhatsApp notification failed: {data}")
+    except Exception as e:
+        print(f"⚠️ WhatsApp notification error: {e}")
+
 def main():
     topic = random.choice(TOPICS)
     try:
@@ -498,6 +530,7 @@ def main():
     post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
     post_to_facebook(title, body, hashtags, post_url)
     post_to_telegram(title, body, hashtags, post_url)
+    post_to_whatsapp(title, post_url)
 
     print(f"Naya post ban gaya: {title}")
     print(f"Hashtags: {' '.join(hashtags)}")
