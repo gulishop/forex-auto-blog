@@ -28,7 +28,18 @@ import requests
 # ---------- CONFIG ----------
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 AFFILIATE_LINK = os.environ.get("AFFILIATE_LINK", "https://example.com/your-affiliate-link")
+AFFILIATE_LINK_2 = os.environ.get("AFFILIATE_LINK_2", "")  # optional doosra Exness/affiliate link
+AFFILIATE_LINK4 = os.environ.get("AFFILIATE_LINK4", "")  # optional chautha Exness/affiliate link
 DERIV_LINK = os.environ.get("DERIV_LINK", "https://track.deriv.com/_WlJFXVMX3vf1hit6RV3zsGNd7ZgqdRLk/1/")
+
+def _affiliate_lines():
+    """Affiliate links ki extra lines banata hai agar AFFILIATE_LINK_2 / AFFILIATE_LINK4 set hon."""
+    lines = ""
+    if AFFILIATE_LINK_2:
+        lines += f"🎯 Exness Account 2 banayein 👉 {AFFILIATE_LINK_2}\n\n"
+    if AFFILIATE_LINK4:
+        lines += f"🎯 Exness Account 4 banayein 👉 {AFFILIATE_LINK4}\n\n"
+    return lines
 SITE_TITLE = "Forex & Crypto Trading Academy"
 SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
 SECOND_SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
@@ -186,6 +197,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
         f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"{_affiliate_lines()}"
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"{hashtags_line}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
@@ -385,6 +397,7 @@ def post_to_facebook(title, body_text, hashtags, post_url):
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
         f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"{_affiliate_lines()}"
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"🌐 Poori website: {SITE_URL}\n\n"
         f"📚 Trading course aur detailed guides ke liye humari Academy dekhein: {SECOND_SITE_URL}"
@@ -422,6 +435,7 @@ def post_to_telegram(title, body_text, hashtags, post_url):
         f"{body_text.strip()}\n\n"
         f"{hashtags_line}\n\n"
         f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"{_affiliate_lines()}"
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
         f"📖 Ye post yahan padhein: {post_url}"
