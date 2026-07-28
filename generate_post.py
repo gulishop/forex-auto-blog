@@ -466,8 +466,7 @@ def post_to_telegram(title, body_text, hashtags, post_url):
 
 def post_to_whatsapp(title, post_url):
     """Aapko personal WhatsApp par notification bhejta hai jab naya post ban jaye.
-    Meta ka pre-approved 'hello_world' template use hota hai (custom template
-    approval se pehle turant kaam karne ke liye)."""
+    Ab custom approved template 'new_post_alert' use hota hai (title aur link ke sath)."""
     if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID or not WHATSAPP_TO_NUMBER:
         print("⚠️ WHATSAPP_TOKEN/WHATSAPP_PHONE_ID/WHATSAPP_TO_NUMBER missing hai - WhatsApp notification skip kiya.")
         return
@@ -478,7 +477,19 @@ def post_to_whatsapp(title, post_url):
         "messaging_product": "whatsapp",
         "to": WHATSAPP_TO_NUMBER,
         "type": "template",
-        "template": {"name": "hello_world", "language": {"code": "en_US"}},
+        "template": {
+            "name": "new_post_alert",
+            "language": {"code": "en_US"},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": title},
+                        {"type": "text", "text": post_url}
+                    ]
+                }
+            ]
+        },
     }
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=30)
