@@ -540,7 +540,8 @@ def main():
     post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
     post_to_facebook(title, body, hashtags, post_url)
     post_to_telegram(title, body, hashtags, post_url)
-    post_to_whatsapp(title, post_url)
+    # WhatsApp notification filhal band hai - Facebook + Telegram hi kaafi hain
+    # post_to_whatsapp(title, post_url)
 
     print(f"Naya post ban gaya: {title}")
     print(f"Hashtags: {' '.join(hashtags)}")
