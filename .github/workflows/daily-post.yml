@@ -2,7 +2,9 @@ name: Daily Auto Post
 
 on:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: "0 5 * * *"   # 10:00 AM Pakistan Time (PKT = UTC+5)
+    - cron: "0 9 * * *"   # 2:00 PM Pakistan Time
+    - cron: "0 12 * * *"  # 5:00 PM Pakistan Time
   workflow_dispatch: {}
 
 permissions:
@@ -23,7 +25,7 @@ jobs:
       - name: Dependencies install karo
         run: pip install -r requirements.txt
 
-      - name: Naya post generate karo (Facebook + Telegram dono par)
+      - name: Naya post generate karo (Facebook + Telegram + WhatsApp)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           AFFILIATE_LINK: ${{ secrets.AFFILIATE_LINK }}
@@ -33,6 +35,9 @@ jobs:
           FB_PAGE_TOKEN_FKC: ${{ secrets.FB_PAGE_TOKEN_FKC }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          WHATSAPP_TOKEN: ${{ secrets.WHATSAPP_TOKEN }}
+          WHATSAPP_PHONE_ID: ${{ secrets.WHATSAPP_PHONE_ID }}
+          WHATSAPP_TO_NUMBER: ${{ secrets.WHATSAPP_TO_NUMBER }}
         run: python generate_post.py
 
       - name: Changes commit aur push karo
