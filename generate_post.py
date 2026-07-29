@@ -1,4 +1,3 @@
-
 """
 Daily Forex/Trading/Crypto Education Post Generator
 -----------------------------------------------------
