@@ -478,7 +478,7 @@ def post_to_whatsapp(title, post_url):
         "type": "template",
         "template": {
             "name": "new_post_alert",
-            "language": {"code": "en_US"},
+            "language": {"code": "en"},
             "components": [
                 {
                     "type": "body",
