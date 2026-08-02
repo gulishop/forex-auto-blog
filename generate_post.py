@@ -43,6 +43,7 @@ def _affiliate_lines():
 SITE_TITLE = "Forex & Crypto Trading Academy"
 SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
 SECOND_SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
+TELEGRAM_CHANNEL_LINK = "https://t.me/FKCTradingAcademyEdu"
 
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
 FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
@@ -104,6 +105,16 @@ TOPICS = [
     "Common mistakes jo naye traders karte hain",
     "Moving averages kaise use karein trading mein",
 ]
+
+def pick_topic(posts):
+    """Agla topic choose karta hai jo pichle posts mein abhi hal hi mein use nahi hua,
+    taake TOPICS list khatam hone tak koi topic repeat na ho. Ek dafa sab topics use ho
+    jayein to cycle naye sire se shuru ho jata hai."""
+    recent_used = [p.get("topic") for p in posts[-(len(TOPICS) - 1):] if p.get("topic")]
+    available = [t for t in TOPICS if t not in recent_used]
+    if not available:
+        available = TOPICS
+    return random.choice(available)
 
 DEFAULT_HASHTAGS = ["#Forex", "#ForexTrading", "#Crypto", "#CryptoTrading", "#Exness", "#TradingTips", "#FinancialFreedom"]
 
@@ -206,9 +217,9 @@ def build_html(title, body_text, date_str, slug, hashtags):
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"{hashtags_line}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
-        f"📖 Ye post yahan padhein: {post_url}"
-    )
-    share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
+        f"📖 Ye post yahan padhein: {post_url}\n\n"
+        f"📢 Telegram Channel Join karein: {TELEGRAM_CHANNEL_LINK}"
+    )  # JS ke andar safely embed karne ke liye
     post_url_json = json.dumps(post_url)
 
     return f"""<!DOCTYPE html>
@@ -270,6 +281,10 @@ def build_html(title, body_text, date_str, slug, hashtags):
     <div class="cta-box">
       <p>🆕 Create Deriv Account:</p>
       <a href="{DERIV_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Deriv par Account Banayein &rarr;</a>
+    </div>
+    <div class="cta-box">
+      <p>📢 Daily Signals & Updates ke liye Telegram Channel Join karein:</p>
+      <a href="{TELEGRAM_CHANNEL_LINK}" target="_blank" rel="noopener" class="cta-button">📢 Telegram Channel Join Karein &rarr;</a>
     </div>
     <p class="site-link">🌐 Poori website dekhein: <a href="{SITE_URL}" target="_blank" rel="noopener">{SITE_URL}</a></p>
     <p class="hashtags">{hashtags_html}</p>
@@ -405,7 +420,8 @@ def post_to_facebook(title, body_text, hashtags, post_url):
         f"{_affiliate_lines()}"
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"🌐 Poori website: {SITE_URL}\n\n"
-        f"📚 Trading course aur detailed guides ke liye humari Academy dekhein: {SECOND_SITE_URL}"
+        f"📚 Trading course aur detailed guides ke liye humari Academy dekhein: {SECOND_SITE_URL}\n\n"
+        f"📢 Humara Telegram Channel Join karein 👉 {TELEGRAM_CHANNEL_LINK}"
     )
 
     for page_id, page_token in pages:
@@ -443,10 +459,9 @@ def post_to_telegram(title, body_text, hashtags, post_url):
         f"{_affiliate_lines()}"
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
-        f"📖 Ye post yahan padhein: {post_url}"
+        f"📖 Ye post yahan padhein: {post_url}\n\n"
+        f"📢 Channel Share karein 👉 {TELEGRAM_CHANNEL_LINK}"
     )
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     for chat_id in chat_ids:
         payload = {
             "chat_id": chat_id,
@@ -501,7 +516,13 @@ def post_to_whatsapp(title, post_url):
         print(f"⚠️ WhatsApp notification error: {e}")
 
 def main():
-    topic = random.choice(TOPICS)
+    posts_file = "posts.json"
+    posts = []
+    if os.path.exists(posts_file):
+        with open(posts_file, "r", encoding="utf-8") as f:
+            posts = json.load(f)
+
+    topic = pick_topic(posts)
     try:
         content = generate_content(topic)
     except QuotaExceededError as e:
@@ -526,12 +547,7 @@ def main():
     with open(f"posts/{slug}.html", "w", encoding="utf-8") as f:
         f.write(post_html)
 
-    posts_file = "posts.json"
-    posts = []
-    if os.path.exists(posts_file):
-        with open(posts_file, "r", encoding="utf-8") as f:
-            posts = json.load(f)
-    posts.append({"title": title, "date": date_str, "slug": slug, "hashtags": hashtags})
+    posts.append({"title": title, "date": date_str, "slug": slug, "hashtags": hashtags, "topic": topic})
     with open(posts_file, "w", encoding="utf-8") as f:
         json.dump(posts, f, ensure_ascii=False, indent=2)
 
