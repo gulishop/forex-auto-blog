@@ -1,28 +1,19 @@
 """
-Multi-Course Daily Lesson Generator
--------------------------------------
-Ye script har course ke liye EK daily lesson generate karta hai (roz 3:00 PM
-Pakistan time par GitHub Actions se chalta hai) aur:
-
-1. Google Gemini (FREE API) se har course ka naya step-by-step lesson likhta hai
-2. Har lesson ko uske course ke apne folder mein HTML page banata hai
-   (courses/<course-slug>/posts/<date>-<id>.html)
-3. Har course ka apna index page update karta hai (courses/<course-slug>/index.html)
-   jisme us course ke saare lessons list hote hain (daily order mein)
-4. Main homepage (index.html) update karta hai jahan har course ek tappable
-   card ke through dikhta hai (logo/icon ke sath)
-5. Har lesson page par Share buttons (WhatsApp/Facebook/Telegram/Instagram/Other) hote hain
-6. Optionally har naye lesson ko Facebook Page aur Telegram par bhi post karta hai
-
-Naya course add karna ho to bas neeche "COURSES" dictionary mein ek naya
-entry add karo — baaki sab automatically kaam karega (index, pages, posting).
-
-Ye script sirf website (GitHub Pages) ko update karta hai — kisi Facebook Page ya
-Telegram channel par khud se kuch post nahi karta. Students Share button se khud
-lesson WhatsApp/Facebook/Telegram par share kar sakte hain.
+Daily Forex/Trading/Crypto Education Post Generator
+-----------------------------------------------------
+Ye script:
+1. Google Gemini (FREE API) se ek naya educational post generate karta hai (emojis ke sath)
+2. Us mein aapka affiliate link daalta hai
+3. Hashtags aur keywords bhi generate karta hai
+4. Ek modern-style HTML file banata hai posts/ folder mein
+5. index.html (homepage) ko update karta hai naye post ke sath
 
 Environment variables (GitHub Secrets se aate hain):
-- GEMINI_API_KEY        -> Google AI Studio se free API key
+- GEMINI_API_KEY   -> Google AI Studio se free API key
+- AFFILIATE_LINK   -> aapka Exness affiliate link
+- DERIV_LINK       -> aapka Deriv affiliate link
+- TELEGRAM_BOT_TOKEN -> BotFather se mila hua bot token
+- TELEGRAM_CHAT_ID   -> jis channel/group mein post karna hai uski chat id (jaise @yourchannel ya -1001234567890)
 """
 
 import os
@@ -32,196 +23,103 @@ import random
 import time
 from datetime import datetime
 from google import genai
+import requests
 
-# ---------- SITE CONFIG ----------
-SITE_TITLE = "Skill Academy — Daily Lessons"
-SITE_TAGLINE = "✨ Har Roz Ek Naya Practical Lesson — Apni Pasand Ka Course Chuno"
-# `or` istemal kiya hai taake agar secret khali/empty set ho to bhi default URL use ho
-# (khali SITE_URL hone se pehle share-link ghalat ban raha tha).
-SITE_URL = os.environ.get("SITE_URL") or "https://example.github.io/skill-academy/"
-TELEGRAM_CHANNEL_LINK = os.environ.get("TELEGRAM_CHANNEL_LINK") or "https://t.me/YourChannel"
-
+# ---------- CONFIG ----------
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+AFFILIATE_LINK = os.environ.get("AFFILIATE_LINK", "https://example.com/your-affiliate-link")
+AFFILIATE_LINK_2 = os.environ.get("AFFILIATE_LINK_2", "")  # optional doosra Exness/affiliate link
+AFFILIATE_LINK4 = os.environ.get("AFFILIATE_LINK4", "")  # optional chautha Exness/affiliate link
+DERIV_LINK = os.environ.get("DERIV_LINK", "https://track.deriv.com/_WlJFXVMX3vf1hit6RV3zsGNd7ZgqdRLk/1/")
 
-# ---------- COURSES ----------
-# Naya course add karna ho to bas ek naya entry yahan add kar dein.
-# "topics" list mein jitne zyada items honge utna lamba cycle chalega
-# (ek dafa sab topics cover hone ke baad dubara shuru ho jata hai).
-COURSES = {
-    "youtube-automation": {
-        "name": "YouTube Automation",
-        "icon": "🎬",
-        "tagline": "Bina face show kiye YouTube channel banayein aur grow karein",
-        "topics": [
-            "YouTube Automation channel kaise start karein - complete roadmap",
-            "Faceless YouTube channel ke liye niche kaise choose karein",
-            "AI voiceover aur script se video kaise banayein",
-            "YouTube SEO - title, tags aur description sahi kaise likhein",
-            "Thumbnail design ke rules jo CTR barhate hain",
-            "YouTube Monetization (AdSense) ke liye eligibility aur steps",
-            "Video editing tools jo beginners free mein use kar sakte hain",
-            "YouTube Shorts se channel ko fast grow kaise karein",
-            "Copyright se bachne ke liye content sourcing ke sahi tareeke",
-            "Consistency aur upload schedule kaise maintain karein",
-        ],
-    },
-    "social-media-marketing": {
-        "name": "Social Media Marketing",
-        "icon": "📱",
-        "tagline": "Brands aur businesses ke liye social media grow karna seekhein",
-        "topics": [
-            "Social Media Marketing kya hai aur beginners kahan se shuru karein",
-            "Content calendar kaise banayein jo consistent posting yaqeeni banaye",
-            "Instagram par organic reach barhane ke practical tarike",
-            "Facebook Ads ka basic structure - campaign, ad set, ad",
-            "Engaging captions aur hooks likhne ka formula",
-            "Hashtag research sahi tarike se kaise karein",
-            "Client ke liye social media report kaise banayein",
-            "Reels aur short-form video trends ko kaise use karein",
-            "Community management - comments aur DMs handle karna",
-            "Personal brand banane ke 3 zaroori steps",
-        ],
-    },
-    "ai-tools": {
-        "name": "AI Tools & Automation",
-        "icon": "🤖",
-        "tagline": "Roz kaam aasan banane wale AI tools aur prompts seekhein",
-        "topics": [
-            "ChatGPT se roz ka kaam fast kaise karein - practical examples",
-            "AI se content writing ke liye prompt engineering basics",
-            "AI image generation tools (jaise Midjourney) ka istemal",
-            "AI se video script aur voiceover kaise banayein",
-            "No-code automation tools (Zapier/Make) ka basic use",
-            "AI se resume aur cover letter kaise improve karein",
-            "AI chatbot business mein kaise use hota hai",
-            "Freelancers ke liye best AI productivity tools",
-            "AI se data analysis aur Excel tasks fast karna",
-            "AI tools use karte waqt privacy aur accuracy ka khayal",
-        ],
-    },
-    "facebook-page-growth": {
-        "name": "Facebook Page Growth",
-        "icon": "👍",
-        "tagline": "Apna Facebook Page organic tareeke se grow karein",
-        "topics": [
-            "Naya Facebook Page banate waqt zaroori settings",
-            "Page ke liye pehle 1000 followers kaise laayein",
-            "Facebook algorithm 2026 mein kis tarah ka content push karta hai",
-            "Facebook Page insights padhna aur samajhna",
-            "Engagement barhane wale post formats (poll, question, carousel)",
-            "Facebook Groups se Page traffic kaise laayein",
-            "Boost post vs proper Ads campaign - kab kya use karein",
-            "Page ko monetize karne ke tareeke (In-stream ads, stars)",
-            "Negative comments aur reviews handle karne ka sahi tareeka",
-            "Consistent branding - cover photo, bio aur CTA button",
-        ],
-    },
-    "amazon-fba": {
-        "name": "Amazon FBA",
-        "icon": "📦",
-        "tagline": "Amazon par apna private label product bech na seekhein",
-        "topics": [
-            "Amazon FBA kya hai aur ye kaise kaam karta hai",
-            "Product research kaise karein - winning product ke signs",
-            "Supplier (Alibaba) se sample mangwane ka process",
-            "Amazon listing optimize karna - title, bullet points, images",
-            "FBA fees aur profit margin calculate kaise karein",
-            "PPC ads se Amazon listing ko rank kaise karayein",
-            "Inventory management aur restocking ki planning",
-            "Amazon account suspension se bachne ke rules",
-            "Reviews aur ratings improve karne ke tareeke",
-            "Private label vs Wholesale vs Dropshipping - farq samjhein",
-        ],
-    },
-    "daraz-seller": {
-        "name": "Daraz Seller",
-        "icon": "🛒",
-        "tagline": "Pakistan ke sabse bade marketplace par seller banein",
-        "topics": [
-            "Daraz par seller account kaise banayein - step by step",
-            "Winning product Daraz ke liye kaise dhoondein",
-            "Daraz listing ke liye achi photos aur description",
-            "Daraz Seller Center dashboard samajhna",
-            "Pricing strategy jo competitors se better convert kare",
-            "Daraz Ads (Sponsored) se sales kaise barhayein",
-            "Order aur return process sahi tarike se handle karna",
-            "Daraz performance metrics jo seller rating par asar dalte hain",
-            "Local suppliers se product sourcing ke tips",
-            "Daraz par seasonal sales (11.11, 12.12) ke liye tayari",
-        ],
-    },
-    "dropshipping": {
-        "name": "Dropshipping",
-        "icon": "🚚",
-        "tagline": "Bina inventory rakhe online store se product bechna seekhein",
-        "topics": [
-            "Dropshipping business model beginners ke liye explained",
-            "Winning product research ke practical tarike",
-            "Shopify store setup karne ka step-by-step guide",
-            "Reliable supplier (AliExpress/local) kaise choose karein",
-            "Facebook/TikTok Ads se dropshipping store par traffic laana",
-            "Store ki conversion rate improve karne ke tips",
-            "Customer service aur delivery delays handle karna",
-            "Dropshipping mein profit margin sahi kaise calculate karein",
-            "Branding se generic dropshipping store ko alag banana",
-            "Common mistakes jo naye dropshippers karte hain",
-        ],
-    },
-    "freelancing": {
-        "name": "Freelancing",
-        "icon": "💻",
-        "tagline": "Fiverr, Upwork aur online kaam se ghar baithe kamayein",
-        "topics": [
-            "Freelancing shuru karne ke liye sahi skill kaise choose karein",
-            "Fiverr par winning gig kaise banayein",
-            "Upwork proposal likhne ka formula jo replies laata hai",
-            "Client se sahi tarike se communicate karna",
-            "Freelancing rates sahi tarike se set karna",
-            "Pehla client kaise laayein - beginner strategy",
-            "Portfolio banane ke liye bina experience ke bhi options",
-            "Time management - multiple clients ek sath handle karna",
-            "Payment safely receive karne ke tareeke Pakistan se",
-            "Long-term client relationships kaise banayein",
-        ],
-    },
-    "digital-marketing-seo": {
-        "name": "Digital Marketing & SEO",
-        "icon": "📊",
-        "tagline": "Websites aur brands ko Google par rank karana seekhein",
-        "topics": [
-            "SEO kya hai aur ye kaam kaise karta hai - basics",
-            "Keyword research free tools se kaise karein",
-            "On-page SEO checklist - har blog post ke liye",
-            "Backlinks kya hote hain aur inhe safely kaise banayein",
-            "Google My Business se local business rank karana",
-            "Email marketing se leads ko customer mein convert karna",
-            "Google Ads ka basic campaign structure",
-            "Website speed aur SEO ka taalluq",
-            "Content marketing strategy jo organic traffic laaye",
-            "Analytics (Google Analytics) padhna seekhein",
-        ],
-    },
-    "graphic-design-canva": {
-        "name": "Graphic Design (Canva)",
-        "icon": "🎨",
-        "tagline": "Bina design background ke professional graphics banayein",
-        "topics": [
-            "Canva ka interface aur zaroori tools samajhna",
-            "Social media post design ke liye sahi size aur layout",
-            "Color combinations jo professional lagti hain",
-            "Fonts pairing ke basic design rules",
-            "Logo design ke liye beginner-friendly tareeka",
-            "Canva templates ko apne brand ke mutabiq customize karna",
-            "Design se clients ke liye income kaise banayein",
-            "Thumbnail aur banner design ke practical tips",
-            "Free stock photos aur elements kahan se milte hain",
-            "Design consistency - brand kit kaise banayein",
-        ],
-    },
-}
+def _affiliate_lines():
+    """Affiliate links ki extra lines banata hai agar AFFILIATE_LINK_2 / AFFILIATE_LINK4 set hon."""
+    lines = ""
+    if AFFILIATE_LINK_2:
+        lines += f"🎯 Exness Account 2 banayein 👉 {AFFILIATE_LINK_2}\n\n"
+    if AFFILIATE_LINK4:
+        lines += f"🎯 Exness Account 4 banayein 👉 {AFFILIATE_LINK4}\n\n"
+    return lines
+SITE_TITLE = "Forex & Crypto Trading Academy"
+SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
+SECOND_SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
+TELEGRAM_CHANNEL_LINK = "https://t.me/FKCTradingAcademyEdu"
 
-DEFAULT_HASHTAGS = ["#SkillDevelopment", "#OnlineEarning", "#LearnOnline", "#Pakistan"]
-BRAND_HASHTAGS = ["#SkillAcademy", "#DailyLesson"]
+FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
+FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
+
+# Doosra Page (FKC Trading Company) - alag secrets ke through
+FB_PAGE_ID_FKC = os.environ.get("FB_PAGE_ID_FKC")
+FB_PAGE_TOKEN_FKC = os.environ.get("FB_PAGE_TOKEN_FKC")
+
+# Telegram (BotFather se bot token, aur group/channel ki chat id)
+# TELEGRAM_CHAT_ID mein ek se zyada destinations bhi de sakte hain, comma-separated
+# (jaise: TELEGRAM_CHAT_ID=-1001111111111,@FKCTradingAcademy)
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+
+# WhatsApp (Meta Cloud API) - sirf aapko personal notification bhejne ke liye
+WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
+WHATSAPP_PHONE_ID = os.environ.get("WHATSAPP_PHONE_ID")
+WHATSAPP_TO_NUMBER = os.environ.get("WHATSAPP_TO_NUMBER")
+
+def _parse_fb_pages():
+    """Facebook Pages ki list banata hai jin par post karna hai.
+    1) FB_PAGE_ID aur FB_PAGE_ACCESS_TOKEN comma-separated ho sakte hain
+       (jaise: FB_PAGE_ID=111,222  FB_PAGE_ACCESS_TOKEN=tokA,tokB) - dono same order/length mein honi chahiye.
+    2) Alag se FB_PAGE_ID_FKC aur FB_PAGE_TOKEN_FKC (FKC Trading Company Page) bhi
+       automatically list mein add ho jate hain agar set ho.
+    """
+    pages = []
+
+    if FB_PAGE_ID and FB_PAGE_ACCESS_TOKEN:
+        ids = [p.strip() for p in FB_PAGE_ID.split(",") if p.strip()]
+        tokens = [t.strip() for t in FB_PAGE_ACCESS_TOKEN.split(",") if t.strip()]
+        if len(ids) != len(tokens):
+            print(f"⚠️ FB_PAGE_ID ({len(ids)}) aur FB_PAGE_ACCESS_TOKEN ({len(tokens)}) ki count match nahi karti - ye pair skip kiya.")
+        else:
+            pages.extend(zip(ids, tokens))
+
+    if FB_PAGE_ID_FKC and FB_PAGE_TOKEN_FKC:
+        pages.append((FB_PAGE_ID_FKC.strip(), FB_PAGE_TOKEN_FKC.strip()))
+
+    if not pages:
+        print("⚠️ Koi Facebook Page secrets set nahi hain - Facebook post skip hoga.")
+
+    return pages
+
+TOPICS = [
+    "Forex trading ke liye beginner ki 5 sabse zaroori tips",
+    "Risk management kaise karein Forex trading mein",
+    "Crypto trading vs Forex trading - konsa behtar hai",
+    "Candlestick patterns jo har trader ko pata hone chahiye",
+    "Leverage kya hai aur ise safely kaise use karein",
+    "Trading psychology - emotions ko control karna kyun zaroori hai",
+    "Support aur Resistance kaise identify karein",
+    "Best time frames Forex trading ke liye",
+    "Stop loss aur take profit ka sahi use",
+    "Crypto market mein volatility ko kaise samjhein",
+    "Trading plan kaise banayein - step by step guide",
+    "Demo account se real account tak ka safar",
+    "Fundamental analysis vs Technical analysis",
+    "Common mistakes jo naye traders karte hain",
+    "Moving averages kaise use karein trading mein",
+]
+
+def pick_topic(posts):
+    """Agla topic choose karta hai jo pichle posts mein abhi hal hi mein use nahi hua,
+    taake TOPICS list khatam hone tak koi topic repeat na ho. Ek dafa sab topics use ho
+    jayein to cycle naye sire se shuru ho jata hai."""
+    recent_used = [p.get("topic") for p in posts[-(len(TOPICS) - 1):] if p.get("topic")]
+    available = [t for t in TOPICS if t not in recent_used]
+    if not available:
+        available = TOPICS
+    return random.choice(available)
+
+DEFAULT_HASHTAGS = ["#Forex", "#ForexTrading", "#Crypto", "#CryptoTrading", "#Exness", "#TradingTips", "#FinancialFreedom"]
+
+# Ye hashtags HAR post ke sath hamesha lagenge (fixed/default), baqi topic-wise hashtags inke sath add hote hain
+BRAND_HASHTAGS = ["#FKCTradingCompany", "#FKCTradingAcademy", "#ForexDailySignal", "#Fazulkhanchandio"]
 
 # ---------- SETUP GEMINI ----------
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -239,6 +137,7 @@ def _is_quota_error(e):
 
 
 def call_gemini(prompt, retries=3, delay=20):
+    """Gemini ko call karta hai, quota/rate-limit error pe thoda ruk ke retry karta hai."""
     last_err = None
     for attempt in range(1, retries + 1):
         try:
@@ -256,78 +155,72 @@ def call_gemini(prompt, retries=3, delay=20):
     raise QuotaExceededError(str(last_err)) from last_err
 
 
-def pick_topic(course_slug, all_posts):
-    topics = COURSES[course_slug]["topics"]
-    course_posts = all_posts.get(course_slug, [])
-    recent_used = [p.get("topic") for p in course_posts[-(len(topics) - 1):] if p.get("topic")]
-    available = [t for t in topics if t not in recent_used]
-    if not available:
-        available = topics
-    return random.choice(available)
-
-
-def generate_content(topic, course_name):
+def generate_content(topic):
     prompt = f"""
-    Tum ek professional "{course_name}" mentor/instructor ho, jo daily step-by-step
-    lessons deta hai apne students ko (jaise ek online academy mein).
-    Aaj ka topic: "{topic}"
+    Tum ek professional Forex aur Crypto trading educator ho, jo social-media-style engaging
+    content likhte ho.
+    Topic: "{topic}"
 
-    Ek chota, modern aur engaging daily lesson likho (Roman Urdu/Hindi + English mix,
-    jaisa online course communities mein likha jata hai). Requirements:
+    Ek chota, modern aur engaging blog post likho (Roman Urdu/Hindi + English mix, jaisa
+    trading community mein likha jata hai). Requirements:
     - 250-350 words
-    - Ek catchy heading do (pehli line, bina # ke) jisme relevant emoji ho, aur heading
-      se clearly pata chale lesson mein kya milega
-    - Content ko step-by-step ya bullet points mein likho (jaise Step 1, Step 2...) taake
-      student practice kar sake
-    - Har step/point ke shuru mein ek relevant emoji use karo
-    - Beginner-friendly, practical aur actionable tone rakho
-    - Ant mein ek short "Aaj ka practice task" line do jo student ko turant kuch karne ko kahe
-    - Koi "guaranteed income" ya "overnight success" jaisa jhoota claim mat karo
+    - 3-4 short paragraphs ya bullet points
+    - Ek catchy heading do (pehli line mein, bina # ke), heading mein ek relevant emoji bhi shamil karo.
+      Heading aisa likho jo curiosity jagaye AUR clearly bataye ke post ke andar kya milega
+      (jaise "5 Galtiyan Jo Naye Traders Karte Hain (Aur Inse Kaise Bachein)" ya
+      "Stop Loss Sahi Jagah Kaise Lagayein? Ye 3 Tarike Try Karein"), sirf vague ya
+      clickbait-only heading mat do jisme content ka andaza na ho.
+    - Har paragraph ya bullet point ke shuru mein ek relevant emoji use karo (jaise 📊 💡 ⚠️ 🚀 💰 📈 🎯)
+    - Beginner-friendly tone, practical tips, modern aur energetic lehja
+    - Ant mein ek short call-to-action line jo trading platform try karne ke liye encourage kare, usme bhi emoji ho
+    - Kisi financial guarantee ya "sure profit" jaisa claim mat karo, disclaimer wala tone rakho
     - Emojis natural lagne chahiye, overuse mat karo (max 1-2 per line)
     """
     return call_gemini(prompt)
 
-
-def generate_hashtags(topic, course_name):
+def generate_hashtags(topic):
     prompt = f"""
-    Topic: "{topic}" (Course: {course_name})
-    Is online-course topic ke liye 6 relevant English hashtags do (jaise #Freelancing #OnlineEarning).
+    Topic: "{topic}"
+    Is Forex/Crypto trading topic ke liye 8 relevant English hashtags do (jaise #Forex #Trading).
     Sirf hashtags do, koi extra text nahi, ek line mein space se separate karke.
     """
     tags = None
     try:
         text = call_gemini(prompt, retries=1)
         generated = [t for t in text.strip().split() if t.startswith("#")]
-        if len(generated) >= 3:
+        if len(generated) >= 4:
             tags = generated
     except Exception:
         pass
     if tags is None:
         tags = DEFAULT_HASHTAGS
 
+    # BRAND_HASHTAGS hamesha shamil honge (duplicates hata ke), taake har post pe fixed brand tags rahein
     final_tags = list(BRAND_HASHTAGS)
     for t in tags:
         if t not in final_tags:
             final_tags.append(t)
     return final_tags
 
-
-def build_lesson_html(course_slug, title, body_text, date_str, slug, hashtags):
-    course = COURSES[course_slug]
+def build_html(title, body_text, date_str, slug, hashtags):
     paragraphs = "\n".join(f"<p>{line.strip()}</p>" for line in body_text.split("\n") if line.strip())
     hashtags_html = " ".join(f'<span class="hashtag">{h}</span>' for h in hashtags)
     hashtags_line = " ".join(hashtags)
-    post_url = f"{SITE_URL.rstrip('/')}/courses/{course_slug}/posts/{slug}.html"
+    post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
 
+    # Share text jo WhatsApp/Facebook/Twitter pe jayega: pehle post ka text, phir neeche saara data (links, hashtags, waghera)
     share_text = (
         f"{title}\n\n"
         f"{body_text.strip()}\n\n"
+        f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"{_affiliate_lines()}"
+        f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"{hashtags_line}\n\n"
-        f"📚 Course: {course['name']}\n"
-        f"📖 Ye lesson yahan padhein: {post_url}\n\n"
+        f"🌐 Poori website: {SITE_URL}\n"
+        f"📖 Ye post yahan padhein: {post_url}\n\n"
         f"📢 Telegram Channel Join karein: {TELEGRAM_CHANNEL_LINK}"
     )
-    share_text_json = json.dumps(share_text)
+    share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
     post_url_json = json.dumps(post_url)
 
     return f"""<!DOCTYPE html>
@@ -335,22 +228,69 @@ def build_lesson_html(course_slug, title, body_text, date_str, slug, hashtags):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{title} | {course['name']} | {SITE_TITLE}</title>
-<link rel="stylesheet" href="../../style.css">
-<link rel="stylesheet" href="../../courses.css">
+<title>{title} | {SITE_TITLE}</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+.share-box {{ margin: 24px 0; text-align: center; }}
+.share-label {{ font-size: 0.95em; opacity: 0.85; margin-bottom: 10px; }}
+.share-icons {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}}
+.share-icon {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 0.9em;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}}
+.share-icon:hover {{ transform: translateY(-2px); opacity: 0.92; }}
+.share-whatsapp {{ background: #25D366; }}
+.share-facebook {{ background: #1877F2; }}
+.share-telegram {{ background: #29A9EA; }}
+.share-instagram {{ background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }}
+.share-other {{ background: #555; font-family: inherit; }}
+.share-copied {{
+  display: none;
+  margin-top: 10px;
+  font-size: 0.85em;
+  color: #2ecc71;
+}}
+.share-copied.visible {{ display: inline-block; }}
+</style>
 </head>
 <body>
 <div class="container">
-  <a href="../../index.html" class="back-link">&larr; Home</a>
-  <a href="../index.html" class="back-link course-back-link">{course['icon']} {course['name']} ke saare lessons</a>
+  <a href="../index.html" class="back-link">&larr; Home</a>
   <div class="post-card">
-    <p class="course-tag">{course['icon']} {course['name']}</p>
     <h1>{title}</h1>
     <p class="date">📅 {date_str}</p>
     {paragraphs}
+    <div class="cta-box">
+      <p>🚀 Trading shuru karne ke liye trusted platform try karein:</p>
+      <a href="{AFFILIATE_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Abhi Account Banayein &rarr;</a>
+    </div>
+    <div class="cta-box">
+      <p>🆕 Create Deriv Account:</p>
+      <a href="{DERIV_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Deriv par Account Banayein &rarr;</a>
+    </div>
+    <div class="cta-box">
+      <p>📢 Daily Signals & Updates ke liye Telegram Channel Join karein:</p>
+      <a href="{TELEGRAM_CHANNEL_LINK}" target="_blank" rel="noopener" class="cta-button">📢 Telegram Channel Join Karein &rarr;</a>
+    </div>
+    <p class="site-link">🌐 Poori website dekhein: <a href="{SITE_URL}" target="_blank" rel="noopener">{SITE_URL}</a></p>
     <p class="hashtags">{hashtags_html}</p>
     <div class="share-box">
-      <p class="share-label">📤 Is lesson ko share karein:</p>
+      <p class="share-label">📤 Is post ko share karein:</p>
       <div class="share-icons">
         <a href="#" class="share-icon share-whatsapp" onclick="shareWhatsapp(); return false;" aria-label="Share on WhatsApp">💬 WhatsApp</a>
         <a href="#" class="share-icon share-facebook" onclick="shareFacebook(); return false;" aria-label="Share on Facebook">📘 Facebook</a>
@@ -360,7 +300,7 @@ def build_lesson_html(course_slug, title, body_text, date_str, slug, hashtags):
       </div>
       <span class="share-copied" id="shareCopied">Link copied! ✅</span>
     </div>
-    <p class="disclaimer">⚠️ Ye lesson sirf educational purpose ke liye hai. Practice consistently karein, results waqt lete hain.</p>
+    <p class="disclaimer">⚠️ Disclaimer: Ye content sirf educational purpose ke liye hai. Trading mein risk hota hai, apni research zaroor karein.</p>
   </div>
 </div>
 <script>
@@ -380,6 +320,7 @@ function shareWhatsapp() {{
 }}
 
 function shareFacebook() {{
+  // FB sharer ignores prefilled text on most browsers, so copy full text + open sharer with the link
   copyAndNotify();
   window.open("https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(postUrl), "_blank");
 }}
@@ -389,6 +330,7 @@ function shareTelegram() {{
 }}
 
 function shareInstagram() {{
+  // Instagram has no web share-intent, so copy text and open the app/site so user can paste it
   copyAndNotify();
   window.open("https://www.instagram.com/", "_blank");
 }}
@@ -405,12 +347,9 @@ function shareOther() {{
 </body>
 </html>"""
 
-
-def update_course_index(course_slug, all_posts):
-    course = COURSES[course_slug]
-    posts = all_posts.get(course_slug, [])
+def update_index(posts):
     items = "\n".join(
-        f'<li><a href="posts/{p["slug"]}.html">{course["icon"]} {p["title"]}</a><span class="date">{p["date"]}</span></li>'
+        f'<li><a href="posts/{p["slug"]}.html">📈 {p["title"]}</a><span class="date">{p["date"]}</span></li>'
         for p in reversed(posts)
     )
     html = f"""<!DOCTYPE html>
@@ -418,99 +357,184 @@ def update_course_index(course_slug, all_posts):
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{course['name']} | {SITE_TITLE}</title>
-<link rel="stylesheet" href="../style.css">
-<link rel="stylesheet" href="../courses.css">
-</head>
-<body>
-<div class="container">
-  <a href="../index.html" class="back-link">&larr; Home / Saare Courses</a>
-  <h1>{course['icon']} {course['name']}</h1>
-  <p class="subtitle">{course['tagline']}</p>
-  <ul class="post-list">
-  {items if items else '<li class="empty">Pehla lesson jald aa raha hai — kal 3 PM PKT par wapis check karein! 🙂</li>'}
-  </ul>
-</div>
-</body>
-</html>"""
-    os.makedirs(f"courses/{course_slug}", exist_ok=True)
-    with open(f"courses/{course_slug}/index.html", "w", encoding="utf-8") as f:
-        f.write(html)
-
-
-def update_home_index(all_posts):
-    cards = []
-    for slug, course in COURSES.items():
-        posts = all_posts.get(slug, [])
-        lesson_count = len(posts)
-        latest = posts[-1]["title"] if posts else "Pehla lesson jald aa raha hai"
-        cards.append(f"""
-    <a class="course-card" href="courses/{slug}/index.html">
-      <div class="course-card-icon">{course['icon']}</div>
-      <div class="course-card-body">
-        <h2>{course['name']}</h2>
-        <p class="course-card-tagline">{course['tagline']}</p>
-        <p class="course-card-latest">📖 {latest}</p>
-        <p class="course-card-count">{lesson_count} daily lessons so far</p>
-      </div>
-      <div class="course-card-arrow">›</div>
-    </a>""")
-
-    html = f"""<!DOCTYPE html>
-<html lang="ur">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{SITE_TITLE}</title>
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="courses.css">
 </head>
 <body>
 <div class="container">
-  <h1>🎓 {SITE_TITLE}</h1>
-  <p class="subtitle">{SITE_TAGLINE}</p>
-  <p class="home-note">📅 Har course ka naya lesson roz <strong>3:00 PM Pakistan time</strong> par post hota hai. Jis course mein interest ho, us par tap karein!</p>
-  <div class="course-grid">
-  {''.join(cards)}
-  </div>
-  <p class="footer-note">📢 Updates ke liye Telegram Channel Join karein 👉 <a href="{TELEGRAM_CHANNEL_LINK}" target="_blank" rel="noopener">{TELEGRAM_CHANNEL_LINK}</a></p>
+  <h1>💹 {SITE_TITLE}</h1>
+  <p class="subtitle">✨ Daily Forex, Trading &amp; Crypto Education</p>
+  <ul class="post-list">
+  {items}
+  </ul>
 </div>
 </body>
 </html>"""
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
+def _debug_fb_token(page_id, page_token):
+    """Post karne se pehle token/permissions ko check karke workflow log mein detail print karta hai,
+    taake exact wajah pata chale (invalid token, missing permission, galat page id, waghera)."""
+    masked = page_token[:10] + "..." + page_token[-6:] if len(page_token) > 20 else "***"
+    print(f"🔍 Debug (Page {page_id}): token prefix = {masked}, length = {len(page_token)}")
 
-def load_posts(posts_file):
-    if os.path.exists(posts_file):
-        with open(posts_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-
-def save_posts(posts_file, all_posts):
-    with open(posts_file, "w", encoding="utf-8") as f:
-        json.dump(all_posts, f, ensure_ascii=False, indent=2)
-
-
-def generate_lesson_for_course(course_slug, all_posts):
-    """Ek course ka lesson banata hai. Sirf website (course page) update karta hai -
-    kisi Facebook Page ya Telegram par kuch post nahi karta."""
-    course = COURSES[course_slug]
-    topic = pick_topic(course_slug, all_posts)
-    print(f"➡️ {course['icon']} {course['name']}: topic = {topic}")
+    # Token kis Page/User ka hai, aur uske permissions kya hain
+    try:
+        me_resp = requests.get(
+            "https://graph.facebook.com/v25.0/me",
+            params={"fields": "id,name", "access_token": page_token},
+            timeout=15,
+        )
+        me_data = me_resp.json()
+        print(f"🔍 Debug (Page {page_id}): /me response = {me_data}")
+        if "id" in me_data and me_data["id"] != str(page_id):
+            print(f"⚠️ Debug (Page {page_id}): Is TOKEN ka ID ({me_data['id']}) FB_PAGE_ID ({page_id}) se MATCH nahi karta! "
+                  f"Ye galat token/page pairing ka sign hai - FB_PAGE_ID aur FB_PAGE_ACCESS_TOKEN secrets ko dobara check karein.")
+    except Exception as e:
+        print(f"⚠️ Debug (Page {page_id}): /me call fail hua: {e}")
 
     try:
-        content = generate_content(topic, course["name"])
-        hashtags = generate_hashtags(topic, course["name"])
-    except QuotaExceededError as e:
-        print(f"⚠️ Gemini quota khatam ho gaya - {course['name']} ka lesson skip kiya. Details: {e}")
-        return
+        perm_resp = requests.get(
+            f"https://graph.facebook.com/v25.0/{page_id}/permissions",
+            params={"access_token": page_token},
+            timeout=15,
+        )
+        print(f"🔍 Debug (Page {page_id}): permissions response = {perm_resp.json()}")
     except Exception as e:
-        # Koi bhi unexpected error (network glitch, temporary Gemini issue waghera) is
-        # course ka lesson skip kar de, lekin baaki courses par asar na dale.
-        print(f"⚠️ {course['name']} ka lesson generate karte waqt error aaya - is course ko skip kiya. Details: {e}")
+        print(f"⚠️ Debug (Page {page_id}): permissions call fail hua: {e}")
+
+
+def post_to_facebook(title, body_text, hashtags, post_url):
+    """Har configured Facebook Page pe naya post automatically publish karta hai."""
+    pages = _parse_fb_pages()
+    if not pages:
+        print("⚠️ FB_PAGE_ID ya FB_PAGE_ACCESS_TOKEN missing hai - Facebook post skip kiya.")
         return
+
+    hashtags_line = " ".join(hashtags)
+    message = (
+        f"{title}\n\n"
+        f"{body_text.strip()}\n\n"
+        f"{hashtags_line}\n\n"
+        f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"{_affiliate_lines()}"
+        f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
+        f"🌐 Poori website: {SITE_URL}\n\n"
+        f"📚 Trading course aur detailed guides ke liye humari Academy dekhein: {SECOND_SITE_URL}\n\n"
+        f"📢 Humara Telegram Channel Join karein 👉 {TELEGRAM_CHANNEL_LINK}"
+    )
+
+    for page_id, page_token in pages:
+        _debug_fb_token(page_id, page_token)
+        url = f"https://graph.facebook.com/v25.0/{page_id}/feed"
+        payload = {
+            "message": message,
+            "link": post_url,
+            "access_token": page_token,
+        }
+        try:
+            response = requests.post(url, data=payload, timeout=30)
+            data = response.json()
+            if "id" in data:
+                print(f"✅ Facebook Page ({page_id}) pe post ho gaya: {data['id']}")
+            else:
+                print(f"⚠️ Facebook post failed (Page {page_id}): {data}")
+        except Exception as e:
+            print(f"⚠️ Facebook post error (Page {page_id}): {e}")
+
+def post_to_telegram(title, body_text, hashtags, post_url):
+    """Telegram ke har configured group/channel pe naya post automatically bhejta hai."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("⚠️ TELEGRAM_BOT_TOKEN ya TELEGRAM_CHAT_ID missing hai - Telegram post skip kiya.")
+        return
+
+    chat_ids = [c.strip() for c in TELEGRAM_CHAT_ID.split(",") if c.strip()]
+
+    hashtags_line = " ".join(hashtags)
+    message = (
+        f"{title}\n\n"
+        f"{body_text.strip()}\n\n"
+        f"{hashtags_line}\n\n"
+        f"🎯 Exness par Free Demo Account banayein 👉 {AFFILIATE_LINK}\n\n"
+        f"{_affiliate_lines()}"
+        f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
+        f"🌐 Poori website: {SITE_URL}\n"
+        f"📖 Ye post yahan padhein: {post_url}\n\n"
+        f"📢 Channel Share karein 👉 {TELEGRAM_CHANNEL_LINK}"
+    )
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    for chat_id in chat_ids:
+        payload = {
+            "chat_id": chat_id,
+            "text": message,
+            "disable_web_page_preview": False,
+        }
+        try:
+            response = requests.post(url, data=payload, timeout=30)
+            data = response.json()
+            if data.get("ok"):
+                print(f"✅ Telegram ({chat_id}) pe post ho gaya (message_id: {data['result']['message_id']})")
+            else:
+                print(f"⚠️ Telegram post failed ({chat_id}): {data}")
+        except Exception as e:
+            print(f"⚠️ Telegram post error ({chat_id}): {e}")
+
+def post_to_whatsapp(title, post_url):
+    """Aapko personal WhatsApp par notification bhejta hai jab naya post ban jaye.
+    Ab custom approved template 'new_post_alert' use hota hai (title aur link ke sath)."""
+    if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID or not WHATSAPP_TO_NUMBER:
+        print("⚠️ WHATSAPP_TOKEN/WHATSAPP_PHONE_ID/WHATSAPP_TO_NUMBER missing hai - WhatsApp notification skip kiya.")
+        return
+
+    url = f"https://graph.facebook.com/v21.0/{WHATSAPP_PHONE_ID}/messages"
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": WHATSAPP_TO_NUMBER,
+        "type": "template",
+        "template": {
+            "name": "new_post_alert",
+            "language": {"code": "en"},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": title},
+                        {"type": "text", "text": post_url}
+                    ]
+                }
+            ]
+        },
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        data = response.json()
+        if "messages" in data:
+            print(f"✅ WhatsApp notification ({WHATSAPP_TO_NUMBER}) pe bhej diya. (Naya post: {title})")
+        else:
+            print(f"⚠️ WhatsApp notification failed: {data}")
+    except Exception as e:
+        print(f"⚠️ WhatsApp notification error: {e}")
+
+def main():
+    posts_file = "posts.json"
+    posts = []
+    if os.path.exists(posts_file):
+        with open(posts_file, "r", encoding="utf-8") as f:
+            posts = json.load(f)
+
+    topic = pick_topic(posts)
+    try:
+        content = generate_content(topic)
+    except QuotaExceededError as e:
+        print("⚠️ Gemini free-tier quota/rate-limit khatam ho gaya hai is waqt.")
+        print(f"Details: {e}")
+        print("ℹ️ Naya post skip kiya - agla scheduled run automatically retry karega.")
+        print("ℹ️ Agar ye baar-baar ho raha hai, naya API key banao: https://aistudio.google.com/apikey")
+        sys.exit(0)  # workflow ko "failed" na dikhayein, bas is run mein post skip
+
+    hashtags = generate_hashtags(topic)
 
     lines = content.split("\n")
     title = lines[0].strip().lstrip("#").strip()
@@ -520,35 +544,25 @@ def generate_lesson_for_course(course_slug, all_posts):
     date_str = today.strftime("%d-%m-%Y")
     slug = today.strftime("%Y-%m-%d") + "-" + str(random.randint(100, 999))
 
-    lesson_html = build_lesson_html(course_slug, title, body, date_str, slug, hashtags)
-    os.makedirs(f"courses/{course_slug}/posts", exist_ok=True)
-    with open(f"courses/{course_slug}/posts/{slug}.html", "w", encoding="utf-8") as f:
-        f.write(lesson_html)
+    post_html = build_html(title, body, date_str, slug, hashtags)
+    os.makedirs("posts", exist_ok=True)
+    with open(f"posts/{slug}.html", "w", encoding="utf-8") as f:
+        f.write(post_html)
 
-    all_posts.setdefault(course_slug, []).append(
-        {"title": title, "date": date_str, "slug": slug, "hashtags": hashtags, "topic": topic}
-    )
+    posts.append({"title": title, "date": date_str, "slug": slug, "hashtags": hashtags, "topic": topic})
+    with open(posts_file, "w", encoding="utf-8") as f:
+        json.dump(posts, f, ensure_ascii=False, indent=2)
 
-    update_course_index(course_slug, all_posts)
+    update_index(posts)
 
-    print(f"✅ Lesson ban gaya: [{course['name']}] {title}")
+    post_url = f"{SITE_URL.rstrip('/')}/posts/{slug}.html"
+    post_to_facebook(title, body, hashtags, post_url)
+    post_to_telegram(title, body, hashtags, post_url)
+    # WhatsApp notification filhal band hai - Facebook + Telegram hi kaafi hain
+    # post_to_whatsapp(title, post_url)
 
-
-def main():
-    posts_file = "posts.json"
-    all_posts = load_posts(posts_file)
-
-    for course_slug in COURSES:
-        try:
-            generate_lesson_for_course(course_slug, all_posts)
-        except Exception as e:
-            # Ek course fail ho jaye to bhi baaki courses zaroor chalein.
-            print(f"⚠️ {course_slug} par unexpected error, agle course par jaa rahe hain: {e}")
-        save_posts(posts_file, all_posts)  # har course ke baad save, taake partial failure pe data na khoye
-
-    update_home_index(all_posts)
-    print("🎉 Aaj ke saare course lessons taiyar ho gaye!")
-
+    print(f"Naya post ban gaya: {title}")
+    print(f"Hashtags: {' '.join(hashtags)}")
 
 if __name__ == "__main__":
     main()
