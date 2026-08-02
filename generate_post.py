@@ -463,6 +463,7 @@ def post_to_telegram(title, body_text, hashtags, post_url):
         f"📖 Ye post yahan padhein: {post_url}\n\n"
         f"📢 Channel Share karein 👉 {TELEGRAM_CHANNEL_LINK}"
     )
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     for chat_id in chat_ids:
         payload = {
             "chat_id": chat_id,
