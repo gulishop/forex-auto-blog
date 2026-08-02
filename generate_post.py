@@ -219,7 +219,8 @@ def build_html(title, body_text, date_str, slug, hashtags):
         f"🌐 Poori website: {SITE_URL}\n"
         f"📖 Ye post yahan padhein: {post_url}\n\n"
         f"📢 Telegram Channel Join karein: {TELEGRAM_CHANNEL_LINK}"
-    )  # JS ke andar safely embed karne ke liye
+    )
+    share_text_json = json.dumps(share_text)  # JS ke andar safely embed karne ke liye
     post_url_json = json.dumps(post_url)
 
     return f"""<!DOCTYPE html>
