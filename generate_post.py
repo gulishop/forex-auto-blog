@@ -17,10 +17,12 @@ Pakistan time par GitHub Actions se chalta hai) aur:
 Naya course add karna ho to bas neeche "COURSES" dictionary mein ek naya
 entry add karo — baaki sab automatically kaam karega (index, pages, posting).
 
+Ye script sirf website (GitHub Pages) ko update karta hai — kisi Facebook Page ya
+Telegram channel par khud se kuch post nahi karta. Students Share button se khud
+lesson WhatsApp/Facebook/Telegram par share kar sakte hain.
+
 Environment variables (GitHub Secrets se aate hain):
 - GEMINI_API_KEY        -> Google AI Studio se free API key
-- FB_PAGE_ID / FB_PAGE_ACCESS_TOKEN  -> (optional) Facebook auto-posting
-- TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID -> (optional) Telegram auto-posting
 """
 
 import os
@@ -30,20 +32,16 @@ import random
 import time
 from datetime import datetime
 from google import genai
-import requests
 
 # ---------- SITE CONFIG ----------
 SITE_TITLE = "Skill Academy — Daily Lessons"
 SITE_TAGLINE = "✨ Har Roz Ek Naya Practical Lesson — Apni Pasand Ka Course Chuno"
-SITE_URL = os.environ.get("SITE_URL", "https://example.github.io/skill-academy/")
-TELEGRAM_CHANNEL_LINK = os.environ.get("TELEGRAM_CHANNEL_LINK", "https://t.me/YourChannel")
+# `or` istemal kiya hai taake agar secret khali/empty set ho to bhi default URL use ho
+# (khali SITE_URL hone se pehle share-link ghalat ban raha tha).
+SITE_URL = os.environ.get("SITE_URL") or "https://example.github.io/skill-academy/"
+TELEGRAM_CHANNEL_LINK = os.environ.get("TELEGRAM_CHANNEL_LINK") or "https://t.me/YourChannel"
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
-FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
-FB_PAGE_ACCESS_TOKEN = os.environ.get("FB_PAGE_ACCESS_TOKEN")
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 # ---------- COURSES ----------
 # Naya course add karna ho to bas ek naya entry yahan add kar dein.
@@ -483,58 +481,6 @@ def update_home_index(all_posts):
         f.write(html)
 
 
-def post_to_facebook(course, title, body_text, hashtags, post_url):
-    if not FB_PAGE_ID or not FB_PAGE_ACCESS_TOKEN:
-        return
-    hashtags_line = " ".join(hashtags)
-    message = (
-        f"{course['icon']} {course['name']} — Daily Lesson\n\n"
-        f"{title}\n\n"
-        f"{body_text.strip()}\n\n"
-        f"{hashtags_line}\n\n"
-        f"📖 Poora lesson: {post_url}\n"
-        f"📢 Telegram Channel: {TELEGRAM_CHANNEL_LINK}"
-    )
-    url = f"https://graph.facebook.com/v25.0/{FB_PAGE_ID}/feed"
-    payload = {"message": message, "link": post_url, "access_token": FB_PAGE_ACCESS_TOKEN}
-    try:
-        response = requests.post(url, data=payload, timeout=30)
-        data = response.json()
-        if "id" in data:
-            print(f"✅ Facebook pe post ho gaya ({course['name']}): {data['id']}")
-        else:
-            print(f"⚠️ Facebook post failed ({course['name']}): {data}")
-    except Exception as e:
-        print(f"⚠️ Facebook post error ({course['name']}): {e}")
-
-
-def post_to_telegram(course, title, body_text, hashtags, post_url):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        return
-    chat_ids = [c.strip() for c in TELEGRAM_CHAT_ID.split(",") if c.strip()]
-    hashtags_line = " ".join(hashtags)
-    message = (
-        f"{course['icon']} {course['name']} — Daily Lesson\n\n"
-        f"{title}\n\n"
-        f"{body_text.strip()}\n\n"
-        f"{hashtags_line}\n\n"
-        f"📖 Poora lesson: {post_url}\n"
-        f"📢 Channel Share karein 👉 {TELEGRAM_CHANNEL_LINK}"
-    )
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    for chat_id in chat_ids:
-        payload = {"chat_id": chat_id, "text": message, "disable_web_page_preview": False}
-        try:
-            response = requests.post(url, data=payload, timeout=30)
-            data = response.json()
-            if data.get("ok"):
-                print(f"✅ Telegram ({chat_id}) pe post ho gaya ({course['name']})")
-            else:
-                print(f"⚠️ Telegram post failed ({chat_id}, {course['name']}): {data}")
-        except Exception as e:
-            print(f"⚠️ Telegram post error ({chat_id}, {course['name']}): {e}")
-
-
 def load_posts(posts_file):
     if os.path.exists(posts_file):
         with open(posts_file, "r", encoding="utf-8") as f:
@@ -548,17 +494,24 @@ def save_posts(posts_file, all_posts):
 
 
 def generate_lesson_for_course(course_slug, all_posts):
+    """Ek course ka lesson banata hai. Sirf website (course page) update karta hai -
+    kisi Facebook Page ya Telegram par kuch post nahi karta."""
     course = COURSES[course_slug]
     topic = pick_topic(course_slug, all_posts)
     print(f"➡️ {course['icon']} {course['name']}: topic = {topic}")
 
     try:
         content = generate_content(topic, course["name"])
+        hashtags = generate_hashtags(topic, course["name"])
     except QuotaExceededError as e:
         print(f"⚠️ Gemini quota khatam ho gaya - {course['name']} ka lesson skip kiya. Details: {e}")
         return
+    except Exception as e:
+        # Koi bhi unexpected error (network glitch, temporary Gemini issue waghera) is
+        # course ka lesson skip kar de, lekin baaki courses par asar na dale.
+        print(f"⚠️ {course['name']} ka lesson generate karte waqt error aaya - is course ko skip kiya. Details: {e}")
+        return
 
-    hashtags = generate_hashtags(topic, course["name"])
     lines = content.split("\n")
     title = lines[0].strip().lstrip("#").strip()
     body = "\n".join(lines[1:]).strip()
@@ -578,10 +531,6 @@ def generate_lesson_for_course(course_slug, all_posts):
 
     update_course_index(course_slug, all_posts)
 
-    post_url = f"{SITE_URL.rstrip('/')}/courses/{course_slug}/posts/{slug}.html"
-    post_to_facebook(course, title, body, hashtags, post_url)
-    post_to_telegram(course, title, body, hashtags, post_url)
-
     print(f"✅ Lesson ban gaya: [{course['name']}] {title}")
 
 
@@ -590,7 +539,11 @@ def main():
     all_posts = load_posts(posts_file)
 
     for course_slug in COURSES:
-        generate_lesson_for_course(course_slug, all_posts)
+        try:
+            generate_lesson_for_course(course_slug, all_posts)
+        except Exception as e:
+            # Ek course fail ho jaye to bhi baaki courses zaroor chalein.
+            print(f"⚠️ {course_slug} par unexpected error, agle course par jaa rahe hain: {e}")
         save_posts(posts_file, all_posts)  # har course ke baad save, taake partial failure pe data na khoye
 
     update_home_index(all_posts)
