@@ -32,6 +32,53 @@ AFFILIATE_LINK_2 = os.environ.get("AFFILIATE_LINK_2", "")  # optional doosra Exn
 AFFILIATE_LINK4 = os.environ.get("AFFILIATE_LINK4", "")  # optional chautha Exness/affiliate link
 DERIV_LINK = os.environ.get("DERIV_LINK", "https://track.deriv.com/_WlJFXVMX3vf1hit6RV3zsGNd7ZgqdRLk/1/")
 
+# ---------- ADS CONFIG (Google AdSense + Adsterra) ----------
+# GitHub Secrets mein ye set karein (jo empty rahega us ka ad simply nahi dikhega):
+# ADSENSE_CLIENT_ID   -> Aapki AdSense publisher ID, jaise "ca-pub-1234567890123456"
+# ADSENSE_SLOT_POST   -> Post page ke andar wale in-article ad unit ki Slot ID
+# ADSENSE_SLOT_HOME   -> Home page ke display ad unit ki Slot ID
+# ADSTERRA_POST_CODE  -> Adsterra dashboard se mila poora <script> snippet (post page ke liye)
+# ADSTERRA_HOME_CODE  -> Adsterra dashboard se mila poora <script> snippet (home page ke liye)
+ADSENSE_CLIENT_ID = os.environ.get("ADSENSE_CLIENT_ID", "")
+ADSENSE_SLOT_POST = os.environ.get("ADSENSE_SLOT_POST", "")
+ADSENSE_SLOT_HOME = os.environ.get("ADSENSE_SLOT_HOME", "")
+ADSTERRA_POST_CODE = os.environ.get("ADSTERRA_POST_CODE", "")
+ADSTERRA_HOME_CODE = os.environ.get("ADSTERRA_HOME_CODE", "")
+
+# EffectiveCPMNetwork (banner ad script + direct/smart link)
+CPM_NETWORK_SCRIPT = '<script src="https://pl30647962.effectivecpmnetwork.com/bf/76/98/bf76982de0029503d43db18bba12b077.js"></script>'
+CPM_NETWORK_DIRECT_LINK = "https://www.effectivecpmnetwork.com/vzqdxpbk97?key=699919418fe2b02eca0fb72d7ff95fea"
+
+
+def _adsense_head_tag():
+    """AdSense ka verification/loader script <head> ke liye. Client ID set na ho to khaali string."""
+    if not ADSENSE_CLIENT_ID:
+        return ""
+    return (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/'
+            f'adsbygoogle.js?client={ADSENSE_CLIENT_ID}" crossorigin="anonymous"></script>')
+
+
+def _adsense_unit(slot_id):
+    """Ek AdSense responsive ad unit ka HTML. Slot ID ya Client ID missing ho to khaali string."""
+    if not ADSENSE_CLIENT_ID or not slot_id:
+        return ""
+    return f"""<div class="ad-slot">
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="{ADSENSE_CLIENT_ID}"
+           data-ad-slot="{slot_id}"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({{}});</script>
+    </div>"""
+
+
+def _adsterra_unit(raw_code):
+    """Adsterra dashboard se copy kiya hua raw script seedha embed karta hai."""
+    if not raw_code:
+        return ""
+    return f'<div class="ad-slot">{raw_code}</div>'
+
 def _affiliate_lines():
     """Affiliate links ki extra lines banata hai agar AFFILIATE_LINK_2 / AFFILIATE_LINK4 set hon."""
     lines = ""
@@ -217,6 +264,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"{hashtags_line}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
+        f"📚 Trading Academy: {SECOND_SITE_URL}\n"
         f"📖 Ye post yahan padhein: {post_url}\n\n"
         f"📢 Telegram Channel Join karein: {TELEGRAM_CHANNEL_LINK}"
     )
@@ -230,7 +278,10 @@ def build_html(title, body_text, date_str, slug, hashtags):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title} | {SITE_TITLE}</title>
 <link rel="stylesheet" href="../style.css">
+{_adsense_head_tag()}
+{CPM_NETWORK_SCRIPT}
 <style>
+.ad-slot {{ margin: 22px 0; text-align: center; overflow: hidden; }}
 .share-box {{ margin: 24px 0; text-align: center; }}
 .share-label {{ font-size: 0.95em; opacity: 0.85; margin-bottom: 10px; }}
 .share-icons {{
@@ -275,6 +326,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
     <h1>{title}</h1>
     <p class="date">📅 {date_str}</p>
     {paragraphs}
+    {_adsense_unit(ADSENSE_SLOT_POST)}
     <div class="cta-box">
       <p>🚀 Trading shuru karne ke liye trusted platform try karein:</p>
       <a href="{AFFILIATE_LINK}" target="_blank" rel="nofollow noopener" class="cta-button">💰 Abhi Account Banayein &rarr;</a>
@@ -288,7 +340,12 @@ def build_html(title, body_text, date_str, slug, hashtags):
       <a href="{TELEGRAM_CHANNEL_LINK}" target="_blank" rel="noopener" class="cta-button">📢 Telegram Channel Join Karein &rarr;</a>
     </div>
     <p class="site-link">🌐 Poori website dekhein: <a href="{SITE_URL}" target="_blank" rel="noopener">{SITE_URL}</a></p>
+    <p class="site-link">📚 Trading Academy dekhein: <a href="{SECOND_SITE_URL}" target="_blank" rel="noopener">{SECOND_SITE_URL}</a></p>
     <p class="hashtags">{hashtags_html}</p>
+    {_adsterra_unit(ADSTERRA_POST_CODE)}
+    <div class="ad-slot">
+      <a href="{CPM_NETWORK_DIRECT_LINK}" target="_blank" rel="nofollow noopener sponsored" class="cta-button">🔗 Sponsored</a>
+    </div>
     <div class="share-box">
       <p class="share-label">📤 Is post ko share karein:</p>
       <div class="share-icons">
@@ -359,14 +416,22 @@ def update_index(posts):
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{SITE_TITLE}</title>
 <link rel="stylesheet" href="style.css">
+{_adsense_head_tag()}
+{CPM_NETWORK_SCRIPT}
+<style>.ad-slot {{ margin: 22px 0; text-align: center; overflow: hidden; }}</style>
 </head>
 <body>
 <div class="container">
   <h1>💹 {SITE_TITLE}</h1>
   <p class="subtitle">✨ Daily Forex, Trading &amp; Crypto Education</p>
+  {_adsense_unit(ADSENSE_SLOT_HOME)}
   <ul class="post-list">
   {items}
   </ul>
+  {_adsterra_unit(ADSTERRA_HOME_CODE)}
+  <div class="ad-slot">
+    <a href="{CPM_NETWORK_DIRECT_LINK}" target="_blank" rel="nofollow noopener sponsored" class="cta-button">🔗 Sponsored</a>
+  </div>
 </div>
 </body>
 </html>"""
