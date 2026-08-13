@@ -47,6 +47,7 @@ ADSTERRA_HOME_CODE = os.environ.get("ADSTERRA_HOME_CODE", "")
 
 # EffectiveCPMNetwork (banner ad script + direct/smart link)
 CPM_NETWORK_SCRIPT = '<script src="https://pl30647962.effectivecpmnetwork.com/bf/76/98/bf76982de0029503d43db18bba12b077.js"></script>'
+CPM_NETWORK_SCRIPT_2 = '<script src="https://pl30647963.effectivecpmnetwork.com/35/50/90/355090180a90a458c3f1895b8e9f6607.js"></script>'
 CPM_NETWORK_DIRECT_LINK = "https://www.effectivecpmnetwork.com/vzqdxpbk97?key=699919418fe2b02eca0fb72d7ff95fea"
 
 
@@ -90,6 +91,7 @@ def _affiliate_lines():
 SITE_TITLE = "Forex & Crypto Trading Academy"
 SITE_URL = "https://gulishop.github.io/forex-auto-blog/"
 SECOND_SITE_URL = "https://gulishop.github.io/FKC-Trading-Academy-Education-system-/"
+THIRD_SITE_URL = "https://gulishop.github.io/fkc-trading-academy/"
 TELEGRAM_CHANNEL_LINK = "https://t.me/FKCTradingAcademyEdu"
 
 FB_PAGE_ID = os.environ.get("FB_PAGE_ID")
@@ -265,6 +267,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
         f"{hashtags_line}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
         f"📚 Trading Academy: {SECOND_SITE_URL}\n"
+        f"📚 FKC Trading Academy: {THIRD_SITE_URL}\n"
         f"📖 Ye post yahan padhein: {post_url}\n\n"
         f"📢 Telegram Channel Join karein: {TELEGRAM_CHANNEL_LINK}"
     )
@@ -280,6 +283,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
 <link rel="stylesheet" href="../style.css">
 {_adsense_head_tag()}
 {CPM_NETWORK_SCRIPT}
+{CPM_NETWORK_SCRIPT_2}
 <style>
 .ad-slot {{ margin: 22px 0; text-align: center; overflow: hidden; }}
 .share-box {{ margin: 24px 0; text-align: center; }}
@@ -341,6 +345,7 @@ def build_html(title, body_text, date_str, slug, hashtags):
     </div>
     <p class="site-link">🌐 Poori website dekhein: <a href="{SITE_URL}" target="_blank" rel="noopener">{SITE_URL}</a></p>
     <p class="site-link">📚 Trading Academy dekhein: <a href="{SECOND_SITE_URL}" target="_blank" rel="noopener">{SECOND_SITE_URL}</a></p>
+    <p class="site-link">📚 FKC Trading Academy: <a href="{THIRD_SITE_URL}" target="_blank" rel="noopener">{THIRD_SITE_URL}</a></p>
     <p class="hashtags">{hashtags_html}</p>
     {_adsterra_unit(ADSTERRA_POST_CODE)}
     <div class="ad-slot">
@@ -418,6 +423,7 @@ def update_index(posts):
 <link rel="stylesheet" href="style.css">
 {_adsense_head_tag()}
 {CPM_NETWORK_SCRIPT}
+{CPM_NETWORK_SCRIPT_2}
 <style>.ad-slot {{ margin: 22px 0; text-align: center; overflow: hidden; }}</style>
 </head>
 <body>
@@ -487,6 +493,7 @@ def post_to_facebook(title, body_text, hashtags, post_url):
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"🌐 Poori website: {SITE_URL}\n\n"
         f"📚 Trading course aur detailed guides ke liye humari Academy dekhein: {SECOND_SITE_URL}\n\n"
+        f"📚 FKC Trading Academy: {THIRD_SITE_URL}\n\n"
         f"📢 Humara Telegram Channel Join karein 👉 {TELEGRAM_CHANNEL_LINK}"
     )
 
@@ -525,6 +532,8 @@ def post_to_telegram(title, body_text, hashtags, post_url):
         f"{_affiliate_lines()}"
         f"🆕 Create Deriv Account 👉 {DERIV_LINK}\n\n"
         f"🌐 Poori website: {SITE_URL}\n"
+        f"📚 Trading Academy: {SECOND_SITE_URL}\n"
+        f"📚 FKC Trading Academy: {THIRD_SITE_URL}\n"
         f"📖 Ye post yahan padhein: {post_url}\n\n"
         f"📢 Channel Share karein 👉 {TELEGRAM_CHANNEL_LINK}"
     )
